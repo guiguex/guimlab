@@ -48,6 +48,7 @@ set(GUIM_SOURCES
     src/global_workspace_kernel.cu
     src/world_model_kernel.cu
     src/symplectic_traces_kernel.cu
+    src/guim_lovelace_kernel.cu
 )
 
 set(GUIM_HEADERS
@@ -60,6 +61,7 @@ set(GUIM_HEADERS
     include/global_workspace.h
     include/world_model.h
     include/symplectic_traces.h
+    include/lovelace_cortex.h
 )
 
 add_library(guim STATIC ${GUIM_SOURCES} ${GUIM_HEADERS})
@@ -90,6 +92,18 @@ endif()
 set_target_properties(stream_wav_demo PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # ----------------------------------------------------------------------------
+#  Next-Gen Pure C++20 Live Presentation Dashboard: guim_dashboard
+# ----------------------------------------------------------------------------
+add_executable(guim_dashboard src/guim_dashboard.cpp)
+target_link_libraries(guim_dashboard PRIVATE guim)
+target_include_directories(guim_dashboard PRIVATE include)
+target_compile_options(guim_dashboard PRIVATE ${GUIM_CXX_FLAGS})
+if(UNIX)
+    target_link_libraries(guim_dashboard PRIVATE rt pthread)
+endif()
+set_target_properties(guim_dashboard PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+# ----------------------------------------------------------------------------
 #  GoogleTest Suite: guim_tests
 # ----------------------------------------------------------------------------
 include(FetchContent)
@@ -114,6 +128,7 @@ add_executable(guim_tests
     tests/test_global_workspace.cpp
     tests/test_world_model.cpp
     tests/test_symplectic_discovery.cpp
+    tests/test_tensor_cores_cortex.cpp
 )
 
 target_link_libraries(guim_tests PRIVATE guim gtest_main)

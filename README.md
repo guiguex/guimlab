@@ -8,7 +8,7 @@
 [![CUDA](https://img.shields.io/badge/CUDA-12.0%2B-green.svg?style=flat-square&logo=nvidia)](https://developer.nvidia.com/cuda-toolkit)
 [![Architecture](https://img.shields.io/badge/Compute-sm__86%20%7C%20RTX%203090-orange.svg?style=flat-square)]()
 [![Zero-Alloc](https://img.shields.io/badge/VRAM%20Allocations-0%20in%20Hot%20Loop-success.svg?style=flat-square)]()
-[![Tests](https://img.shields.io/badge/Tests-22%2F22%20Passed-brightgreen.svg?style=flat-square)]()
+[![Tests](https://img.shields.io/badge/Tests-26%2F26%20Passed-brightgreen.svg?style=flat-square)]()
 [![Latency](https://img.shields.io/badge/Median%20Latency-308.5%20%CE%BCs-purple.svg?style=flat-square)]()
 
 <br/>
@@ -89,7 +89,19 @@ The conjugate momentum trace $P_{ij}$ **cancels the intrinsic phase lag**, accel
 
 ---
 
-## 🛠️ Quickstart: Building & Running
+## 🏛️ High-Performance Architectural Foundations
+
+GuimLab’s bare-metal engine synthesizes three premier design paradigms in high-performance computing and computational neuroscience:
+
+1. **[GeNN](https://github.com/genn-team/genn) (GPU Enhanced Neural Networks)**: Analytical continuous differential equations fused directly in thread registers, executing trace updates with **zero intermediate VRAM traffic**.
+2. **[NVIDIA / CUTLASS](https://github.com/NVIDIA/cutlass)**: Header-only C++ template metaprogramming for warp-level Tensor Core matrix multiplication (`mma.sync`) and asynchronous global-to-shared transfers (`cp.async`), eliminating opaque runtime library overhead (`cuBLAS`, `cuDNN`).
+3. **[ggml](https://github.com/ggerganov/ggml)**: Monolithic pre-allocated memory arenas, static deterministic computation graphs, and cache line-aligned (`alignas(64)`) zero-copy shared memory IPC without heap allocation on the hot path.
+
+👉 Read the complete doctoral scientific analysis: [**`docs/09-architectural-paradigms-genn-cutlass-ggml.md`**](file:///d:/Applications/guimlab/docs/09-architectural-paradigms-genn-cutlass-ggml.md)
+
+---
+
+## 🚀 Quickstart: Building & Running
 
 ### Requirements
 * Linux (Native or WSL2 Ubuntu 22.04 / 24.04)

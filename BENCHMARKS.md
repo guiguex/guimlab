@@ -47,7 +47,19 @@ All metrics in this report are measured live on physical hardware (**NVIDIA GeFo
 
 ---
 
-## 3. PTX Register Pressure & Memory Footprint
+## 3. Tensor Core Cortex & GRM-FIN Benchmarks
+
+```bash
+./build/bin/guim_tests --gtest_filter=TensorCoresCortex.*
+```
+
+- **Invariant Stability**: Max Cortical Energy over 1,000 non-stationary steps bounded strictly at $\le 256.0$.
+- **Host-Device Round-Trip Latency**: $< 500\ \mu\text{s}$ over 5,000 continuous timed steps.
+- **Hardware Instruction**: `mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32` with PTX fast `rsqrt.approx.f32`.
+
+---
+
+## 4. PTX Register Pressure & Memory Footprint
 
 Compiled with `nvcc -O3 -arch=sm_86 --use_fast_math -Xptxas -v`:
 
@@ -55,14 +67,16 @@ Compiled with `nvcc -O3 -arch=sm_86 --use_fast_math -Xptxas -v`:
 |---|---|---|---|---|
 | `kiss_reflex_persistent_kernel` (L0 Reflex) | **44 regs** | 16,960 B | **0 bytes** | **0 bytes / 0 bytes** |
 | `symplectic_step_kernel` (AK-SRT) | **44 regs** | 0 B | **0 bytes** | **0 bytes / 0 bytes** |
-| `guim_core_step_kernel` (Cortex L1/L2) | **40 regs** | 0 B | **0 bytes** | **0 bytes / 0 bytes** |
+| `guim_lovelace_fused_kernel` (L1/L2 Cortex) | **48 regs** | 12 B | **0 bytes** | **0 bytes / 0 bytes** |
+| `lovelace_cortex_tc_step_kernel` (TC Direct) | **34 regs** | 0 B | **0 bytes** | **0 bytes / 0 bytes** |
+| `guim_core_step_kernel` (Cortex Legacy) | **40 regs** | 0 B | **0 bytes** | **0 bytes / 0 bytes** |
 | `plasticity_sweeper_kernel` (CBP GC) | **30 regs** | 0 B | **0 bytes** | **0 bytes / 0 bytes** |
 
 ---
 
-## 4. Test Suite Summary
+## 5. Test Suite Summary
 
-- **Total Test Suites**: `23 / 23`
+- **Total Test Suites**: `26 / 26`
 - **Pass Rate**: `100% (GREEN)`
-- **Total Execution Time**: `32.26 s`
-- **Tested Modules**: Correctness, Latency bounds, Plasticity monotonicity, Convergence invariants, Memory stability, Episodic Modern Hopfield VSA, Global Workspace, World Model Rollout, Symplectic Discovery Suite.
+- **Total Execution Time**: `34.07 s`
+- **Tested Modules**: Correctness, Latency bounds, Plasticity monotonicity, Convergence invariants, Memory stability, Episodic Modern Hopfield VSA, Global Workspace, World Model Rollout, Symplectic Discovery Suite, Tensor Cores Cortex GRM-FIN Suite.
