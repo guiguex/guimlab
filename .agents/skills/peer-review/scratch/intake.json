@@ -1,0 +1,60 @@
+{
+  "schema_version": "2.0",
+  "review_id": "REVIEW-GUIMLAB-001",
+  "material": {
+    "status": "unpublished_confidential",
+    "contains_personal_or_sensitive_data": false
+  },
+  "authorization": {
+    "basis": "author_request",
+    "documented": true,
+    "local_processing_authorized": true,
+    "external_processing_authorized": false
+  },
+  "reviewer": {
+    "capacity": "author_requested_reader",
+    "human_accountable": true,
+    "competence_areas": [
+      "machine_learning",
+      "cuda_systems",
+      "neuromorphic_computing",
+      "speech_processing"
+    ],
+    "competence_limits": [
+      "hardware_tapeout_asic_fabrication"
+    ],
+    "conflict_status": "none_identified",
+    "conflicts": []
+  },
+  "venue_policy": {
+    "checked": true,
+    "peer_review_model": "open",
+    "confidential_editor_notes_supported": true
+  },
+  "ai_use": {
+    "policy": "permitted_with_disclosure",
+    "planned": "local_deterministic_tools",
+    "permission_confirmed": false,
+    "disclosure_planned": false
+  },
+  "handling": {
+    "local_only": true,
+    "external_service_use": false,
+    "data_reuse_permitted": false,
+    "retention_rule": "delete_after_review",
+    "deletion_or_retention_record_planned": true
+  },
+  "scope": {
+    "manuscript_type": "systems_and_methods",
+    "requested_focus": [
+      "mathematical_formalism",
+      "empirical_benchmarking",
+      "cuda_systems_engineering",
+      "claim_evidence_alignment"
+    ],
+    "out_of_scope": [
+      "human_subject_clinical_trials"
+    ],
+    "specialist_review_needed": []
+  }
+}

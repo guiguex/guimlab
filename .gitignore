@@ -37,12 +37,10 @@ compile_commands.json
 *.cuobjdump
 *.nvprof
 
-# Build wrappers
-# (gitignore_dir/ is a placeholder folder for this .gitignore - safe to delete)
-
 # Editor / IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 .DS_Store
@@ -61,6 +59,3 @@ test_session_output*.json
 # Local secrets (if any)
 .env
 .env.local
-/.agents
-/tests
-/.claude
