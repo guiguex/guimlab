@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <atomic>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -181,8 +182,10 @@ bool ShmClient::poll(StudioTelemetry& telemetry) {
         ).count()
     );
 
-    if (shm_ptr_->timestamp_ns > 0 && now_ns >= shm_ptr_->timestamp_ns) {
-        float rtt_us = static_cast<float>(now_ns - shm_ptr_->timestamp_ns) / 1000.0f;
+    std::atomic_thread_fence(std::memory_order_acquire);
+    std::uint64_t frame_ts = shm_ptr_->timestamp_ns;
+    if (frame_ts > 0 && now_ns >= frame_ts) {
+        float rtt_us = static_cast<float>(now_ns - frame_ts) / 1000.0f;
         if (rtt_us > 0.0f && rtt_us < 50000.0f) {
             telemetry.latency_us.push(rtt_us);
             telemetry.p50_latency_us = 0.9f * telemetry.p50_latency_us + 0.1f * rtt_us;

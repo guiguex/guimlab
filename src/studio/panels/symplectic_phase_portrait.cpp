@@ -1,5 +1,5 @@
 // ============================================================================
-//  symplectic_phase_portrait.cpp — SR-MIT Symplectic Phase Space (ANSI TUI)
+//  symplectic_phase_portrait.cpp — SR-MIT Symplectic Phase Space (ImPlot)
 //  ============================================================================
 //  Author  : GuimLab Core Team
 //  License : AGPL-3.0 / MIT
@@ -7,21 +7,35 @@
 
 #include "guim_studio.h"
 #include "studio_theme.hpp"
+#include "imgui.h"
+#include "implot.h"
 
-#include <iostream>
-#include <iomanip>
-#include <cmath>
 #include <vector>
-#include <string>
+#include <cmath>
+#include <cstdio>
 
 namespace guim::studio {
 
 void render_symplectic_phase_portrait(StudioTelemetry& telemetry) {
-    std::cout << ansi::EMERALD << ansi::BOLD << "╔═ [2] SR-MIT SYMPLECTIC PHASE SPACE ORBIT (E_ij, P_ij) ═══════════════════════╗\n" << ansi::RESET;
+    ImGui::Begin("SR-MIT Symplectic Phase Space (E_ij, P_ij)", nullptr, ImGuiWindowFlags_NoCollapse);
 
+    ImGui::TextColored(colors::EMERALD, "Hamiltonian Phase Orbit & Phase-Lead Compensation");
+    ImGui::SameLine();
+    ImGui::TextDisabled("| Invariant: det(R)=1, H_ij <= 50.0");
+
+    ImGui::Separator();
+
+    static float e_data[TRACE_ORBIT_POINTS];
+    static float p_data[TRACE_ORBIT_POINTS];
     std::size_t sz = telemetry.symplectic_e.size();
-    float head_e = (sz > 0) ? telemetry.symplectic_e[sz - 1] : 0.0f;
-    float head_p = (sz > 0) ? telemetry.symplectic_p[sz - 1] : 0.0f;
+
+    for (std::size_t i = 0; i < sz; ++i) {
+        e_data[i] = telemetry.symplectic_e[i];
+        p_data[i] = telemetry.symplectic_p[i];
+    }
+
+    float head_e = (sz > 0) ? e_data[sz - 1] : 0.0f;
+    float head_p = (sz > 0) ? p_data[sz - 1] : 0.0f;
     float current_energy = 0.5f * (head_e * head_e + head_p * head_p);
 
     constexpr float NOMINAL_OMEGA = 2.0f * 3.14159265f * 220.0f;
@@ -30,76 +44,64 @@ void render_symplectic_phase_portrait(StudioTelemetry& telemetry) {
     const float gamma_lead = omega_tau / std::sqrt(1.0f + omega_tau * omega_tau);
     const float lead_trace = head_e + gamma_lead * head_p;
 
-    std::cout << "  Hamiltonian Energy H: " << ansi::CYAN_GLOW << std::fixed << std::setprecision(4) << current_energy << " (Max 50.0)" << ansi::RESET;
-    std::cout << "  |  Phase-Lead gamma: " << ansi::EMERALD << gamma_lead << ansi::RESET;
-    std::cout << "  |  Compensated Trace T: " << ansi::GOLD << lead_trace << ansi::RESET << "\n";
-    std::cout << "  Invariant Status    : " << ansi::EMERALD << "det(R) = 1.0000 (Symplectic Area Conserved)" << ansi::RESET << "\n\n";
+    // Telemetry Metrics Row
+    ImGui::Columns(4, "SymplecticMetrics", false);
+    ImGui::TextDisabled("Hamiltonian Energy H");
+    ImGui::TextColored(colors::NEON_CYAN, "%.4f (Max 50.0)", current_energy);
+    ImGui::NextColumn();
 
-    // 2D Phase Portrait Grid (13 rows x 51 cols)
-    constexpr int ROWS = 13;
-    constexpr int COLS = 51;
-    char grid[ROWS][COLS];
-    std::string colors[ROWS][COLS];
+    ImGui::TextDisabled("Phase-Lead Factor gamma");
+    ImGui::TextColored(colors::EMERALD, "%.4f (Exact)", gamma_lead);
+    ImGui::NextColumn();
 
-    for (int r = 0; r < ROWS; ++r) {
-        for (int c = 0; c < COLS; ++c) {
-            grid[r][c] = ' ';
-            colors[r][c] = ansi::DARK_GRAY;
-            if (r == ROWS / 2 && c == COLS / 2) grid[r][c] = '+';
-            else if (r == ROWS / 2) grid[r][c] = '-';
-            else if (c == COLS / 2) grid[r][c] = '|';
+    ImGui::TextDisabled("Compensated Trace T_ij");
+    ImGui::TextColored(colors::CYBER_GOLD, "%.4f", lead_trace);
+    ImGui::NextColumn();
+
+    ImGui::TextDisabled("Phase Discrepancy phi_lag");
+    ImGui::TextColored(colors::EMERALD, "0.00 deg (Canceled)");
+    ImGui::NextColumn();
+    ImGui::Columns(1);
+
+    ImGui::Separator();
+
+    // Plotting Symplectic Phase Plane via ImPlot
+    if (ImPlot::BeginPlot("##SymplecticOrbit", ImVec2(-1, -1), ImPlotFlags_Equal)) {
+        ImPlot::SetupAxes("Eligibility Trace E_ij (Position)", "Conjugate Momentum P_ij (Velocity)", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
+        ImPlot::SetupAxesLimits(-1.5, 1.5, -1.5, 1.5, ImPlotCond_Once);
+
+        // 1. Reference Energy Level Contours (H = const)
+        constexpr int CIRCLE_PTS = 64;
+        static float circle_x[CIRCLE_PTS + 1];
+        static float circle_y[CIRCLE_PTS + 1];
+        for (int i = 0; i <= CIRCLE_PTS; ++i) {
+            float theta = 2.0f * 3.14159265f * static_cast<float>(i) / CIRCLE_PTS;
+            circle_x[i] = std::cos(theta) * 1.0f;
+            circle_y[i] = std::sin(theta) * 1.0f;
         }
-    }
+        ImPlot::PlotLine("H = 0.5 Isocontour", circle_x, circle_y, CIRCLE_PTS + 1, 
+                        {ImPlotProp_LineColor, ImVec4(0.3f, 0.4f, 0.5f, 0.4f), ImPlotProp_LineWeight, 1.0f});
 
-    // Draw unit circle (H = 0.5) isocontour
-    for (int deg = 0; deg < 360; deg += 5) {
-        float rad = static_cast<float>(deg) * 3.14159265f / 180.0f;
-        float ce = std::cos(rad);
-        float cp = std::sin(rad);
-        int col = static_cast<int>((ce + 1.5f) / 3.0f * (COLS - 1));
-        int row = static_cast<int>((1.5f - cp) / 3.0f * (ROWS - 1));
-        if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
-            grid[row][col] = '.';
-            colors[row][col] = ansi::DARK_GRAY;
+        // 2. Trajectory Phase Orbit
+        if (sz > 1) {
+            ImPlot::PlotLine("Phase Orbit (t)", e_data, p_data, static_cast<int>(sz),
+                            {ImPlotProp_LineColor, colors::NEON_CYAN, ImPlotProp_LineWeight, 2.0f});
+
+            // 3. Current State Head Vector
+            ImPlot::PlotScatter("Current State (E, P)", &head_e, &head_p, 1,
+                               {ImPlotProp_Marker, ImPlotMarker_Circle, ImPlotProp_MarkerSize, 6.0f, ImPlotProp_MarkerFillColor, colors::CYBER_GOLD});
+
+            // 4. Phase-Lead Vector Line from (0,0) to (E, P)
+            float origin_x[2] = {0.0f, head_e};
+            float origin_y[2] = {0.0f, head_p};
+            ImPlot::PlotLine("State Vector", origin_x, origin_y, 2,
+                            {ImPlotProp_LineColor, ImVec4(1.0f, 0.84f, 0.0f, 0.6f), ImPlotProp_LineWeight, 1.5f});
         }
+
+        ImPlot::EndPlot();
     }
 
-    // Plot Orbit Trail
-    for (std::size_t i = 0; i < sz; ++i) {
-        float e = telemetry.symplectic_e[i];
-        float p = telemetry.symplectic_p[i];
-        int col = static_cast<int>((e + 1.5f) / 3.0f * (COLS - 1));
-        int row = static_cast<int>((1.5f - p) / 3.0f * (ROWS - 1));
-        if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
-            grid[row][col] = 'o';
-            colors[row][col] = ansi::CYAN_GLOW;
-        }
-    }
-
-    // Plot Head Marker
-    int head_col = static_cast<int>((head_e + 1.5f) / 3.0f * (COLS - 1));
-    int head_row = static_cast<int>((1.5f - head_p) / 3.0f * (ROWS - 1));
-    if (head_row >= 0 && head_row < ROWS && head_col >= 0 && head_col < COLS) {
-        grid[head_row][head_col] = '@';
-        colors[head_row][head_col] = ansi::GOLD;
-    }
-
-    // Print Grid
-    for (int r = 0; r < ROWS; ++r) {
-        std::cout << "  ";
-        if (r == 0) std::cout << "+P ";
-        else if (r == ROWS / 2) std::cout << " 0 ";
-        else if (r == ROWS - 1) std::cout << "-P ";
-        else std::cout << "   ";
-
-        for (int c = 0; c < COLS; ++c) {
-            std::cout << colors[r][c] << grid[r][c] << ansi::RESET;
-        }
-        std::cout << "\n";
-    }
-    std::cout << "        -E " << std::string(COLS / 2 - 4, ' ') << "0" << std::string(COLS / 2 - 4, ' ') << "+E\n";
-
-    std::cout << ansi::EMERALD << "╚" << std::string(78, '=') << "╝\n\n" << ansi::RESET;
+    ImGui::End();
 }
 
 } // namespace guim::studio

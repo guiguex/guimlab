@@ -1,5 +1,5 @@
 // ============================================================================
-//  metagradients_inspector.cpp — TMD-ET / IDBD Learning Rates (ANSI TUI)
+//  metagradients_inspector.cpp — TMD-ET / IDBD Learning Rates (ImPlot)
 //  ============================================================================
 //  Author  : GuimLab Core Team
 //  License : AGPL-3.0 / MIT
@@ -7,47 +7,67 @@
 
 #include "guim_studio.h"
 #include "studio_theme.hpp"
+#include "imgui.h"
+#include "implot.h"
 
-#include <iostream>
-#include <iomanip>
+#include <vector>
 #include <cmath>
-#include <string>
+#include <cstdio>
 
 namespace guim::studio {
 
 void render_metagradients_inspector(StudioTelemetry& telemetry) {
-    std::cout << ansi::AMBER << ansi::BOLD << "╔═ [4] TMD-ET META-GRADIENTS & CHEMICAL ATTENTION DIAL ═════════════════════════╗\n" << ansi::RESET;
+    ImGui::Begin("TMD-ET Meta-Gradients & Attention Barometer", nullptr, ImGuiWindowFlags_NoCollapse);
 
-    std::cout << "  Dopamine delta(t) (TD-Error): ";
-    if (telemetry.dopamine >= 0.0f) {
-        std::cout << ansi::EMERALD << std::fixed << std::setprecision(3) << "+" << telemetry.dopamine << ansi::RESET;
-    } else {
-        std::cout << ansi::CRIMSON << std::fixed << std::setprecision(3) << telemetry.dopamine << ansi::RESET;
+    ImGui::TextColored(colors::AMBER, "Per-Synapse Learning Rate Adaptation alpha_ij = exp(beta_ij)");
+    ImGui::SameLine();
+    ImGui::TextDisabled("| IDBD Sutton 1992 / Javed 2024");
+
+    ImGui::Separator();
+
+    // Neuromodulator Chemical State (Dopamine & Serotonin)
+    ImGui::Columns(3, "NeuromodCols", false);
+    ImGui::TextDisabled("Dopamine delta(t) (TD Error)");
+    ImGui::TextColored(telemetry.dopamine >= 0.0f ? colors::EMERALD : colors::CRIMSON, 
+                       "%+.4f (Reward Signal)", telemetry.dopamine);
+    ImGui::NextColumn();
+
+    ImGui::TextDisabled("Serotonin (Plasticity Gate)");
+    ImGui::TextColored(colors::PURPLE, "%.4f (Modulation Gate)", telemetry.serotonin);
+    ImGui::NextColumn();
+
+    ImGui::TextDisabled("Effective Meta-Gradient");
+    ImGui::TextColored(colors::CYBER_GOLD, "%.5f", telemetry.dopamine * telemetry.serotonin * 0.015f);
+    ImGui::NextColumn();
+    ImGui::Columns(1);
+
+    ImGui::Separator();
+
+    // Reflex Motor Outputs (16 channels)
+    ImGui::Text("Reflex L0 Spinal Motor Outputs (< 100 ns SRAM Execution):");
+    static float motor_indices[GUIM_REFLEX_MOTORS];
+    static float motor_values[GUIM_REFLEX_MOTORS];
+    for (int i = 0; i < GUIM_REFLEX_MOTORS; ++i) {
+        motor_indices[i] = static_cast<float>(i);
+        motor_values[i]  = telemetry.reflex_motors[i];
     }
-    std::cout << " " << render_bar(telemetry.dopamine, 16, true);
 
-    std::cout << "  |  Serotonin: " << ansi::PURPLE << std::setprecision(3) << telemetry.serotonin << ansi::RESET
-              << " " << render_bar(telemetry.serotonin, 16, false) << "\n";
+    if (ImPlot::BeginPlot("##ReflexMotors", ImVec2(-1, 160))) {
+        ImPlot::SetupAxes("Motor Channel (0..15: Formant Dynamics / Turn-Taking Latents)", "Normalized Torque (-1.0 to +1.0)", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
+        ImPlot::SetupAxesLimits(-0.5, GUIM_REFLEX_MOTORS - 0.5, -1.1, 1.1, ImPlotCond_Always);
 
-    std::cout << "  Effective Meta-Gradient     : " << ansi::GOLD << std::setprecision(5) 
-              << (telemetry.dopamine * telemetry.serotonin * 0.015f) << ansi::RESET << "\n\n";
+        // Zero Baseline
+        static float zero_x[2] = {-0.5f, GUIM_REFLEX_MOTORS - 0.5f};
+        static float zero_y[2] = {0.0f, 0.0f};
+        ImPlot::PlotLine("Zero Baseline", zero_x, zero_y, 2,
+                        {ImPlotProp_LineColor, ImVec4(0.3f, 0.4f, 0.5f, 0.4f), ImPlotProp_LineWeight, 1.0f});
 
-    // 16 Spinal Motor Channels
-    std::cout << "  Reflex L0 Spinal Motors (16 Channels, < 100 ns):\n";
-    for (int i = 0; i < GUIM_REFLEX_MOTORS; i += 2) {
-        std::cout << "    M" << std::setw(2) << i << ": " 
-                  << render_bar(telemetry.reflex_motors[i], 16, true) << " "
-                  << std::setw(5) << std::setprecision(2) << telemetry.reflex_motors[i];
-
-        if (i + 1 < GUIM_REFLEX_MOTORS) {
-            std::cout << "  │  M" << std::setw(2) << (i + 1) << ": " 
-                      << render_bar(telemetry.reflex_motors[i + 1], 16, true) << " "
-                      << std::setw(5) << std::setprecision(2) << telemetry.reflex_motors[i + 1];
-        }
-        std::cout << "\n";
+        ImPlot::PlotBars("Motor Activations", motor_indices, motor_values, GUIM_REFLEX_MOTORS, 0.55,
+                        {ImPlotProp_FillColor, colors::NEON_CYAN});
+        ImPlot::EndPlot();
     }
 
-    std::cout << ansi::AMBER << "╚" << std::string(78, '=') << "╝\n\n" << ansi::RESET;
+    ImGui::End();
 }
 
 } // namespace guim::studio

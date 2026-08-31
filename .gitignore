@@ -55,11 +55,12 @@ __pycache__/
 
 # Bench results
 build/bench_results.json
+test_session_output*.json
+*.json.tmp
 
 # Local secrets (if any)
 .env
 .env.local
 /.agents
 /tests
-AGENTS.md
-/docs
+/.claude

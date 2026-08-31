@@ -113,7 +113,7 @@ endif()
 set_target_properties(guim_dashboard PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # ----------------------------------------------------------------------------
-#  GuimLab Studio — Pure C++20 ANSI TrueColor Neuromorphic Cockpit
+#  GuimLab Studio — AAA High-Density Neuromorphic Cockpit (Sokol / ImGui / ImPlot)
 # ----------------------------------------------------------------------------
 add_executable(guim_studio
     src/studio/main_studio.cpp
@@ -124,17 +124,28 @@ add_executable(guim_studio
     src/studio/panels/audio_oscilloscope.cpp
     src/studio/panels/metagradients_inspector.cpp
     src/studio/panels/telemetry_cockpit.cpp
+    src/studio/third_party/imgui/imgui.cpp
+    src/studio/third_party/imgui/imgui_draw.cpp
+    src/studio/third_party/imgui/imgui_tables.cpp
+    src/studio/third_party/imgui/imgui_widgets.cpp
+    src/studio/third_party/implot/implot.cpp
+    src/studio/third_party/implot/implot_items.cpp
 )
 
 target_include_directories(guim_studio PRIVATE
     include
+    include/sokol
     src/studio
+    src/studio/third_party/imgui
+    src/studio/third_party/implot
 )
 
 target_compile_options(guim_studio PRIVATE ${GUIM_CXX_FLAGS})
 target_link_libraries(guim_studio PRIVATE guim)
 if(UNIX)
-    target_link_libraries(guim_studio PRIVATE rt pthread)
+    target_link_libraries(guim_studio PRIVATE GL X11 Xi Xcursor dl m rt pthread)
+elseif(WIN32)
+    target_link_libraries(guim_studio PRIVATE d3d11 dxgi)
 endif()
 set_target_properties(guim_studio PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
@@ -168,6 +179,7 @@ add_executable(guim_tests
     tests/test_harness_integrity.cpp
     tests/test_physics_constants.cpp
     tests/test_scientific_hypotheses.cpp
+    tests/test_sarts_ring_buffer.cpp
     src/studio/shm_client.cpp
     src/studio/viewport_session.cpp
 )
@@ -234,6 +246,14 @@ if(UNIX)
     target_include_directories(guim_monitor PRIVATE include)
     target_compile_options(guim_monitor PRIVATE ${GUIM_CXX_FLAGS})
     target_link_libraries(guim_monitor PRIVATE rt pthread)
+    set_target_properties(guim_monitor PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+endif()
+
+# Cross-platform TUI Visualizer: guim_monitor (Win32 + POSIX)
+if(NOT UNIX)
+    add_executable(guim_monitor src/guim_monitor.cpp)
+    target_include_directories(guim_monitor PRIVATE include)
+    target_compile_options(guim_monitor PRIVATE ${GUIM_CXX_FLAGS})
     set_target_properties(guim_monitor PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 endif()
 

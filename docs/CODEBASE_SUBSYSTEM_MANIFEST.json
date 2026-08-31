@@ -1,0 +1,54 @@
+{
+  "project": "guimlab",
+  "version": "0.3.0",
+  "subsystems": [
+    {
+      "id": "reflex_l0",
+      "name": "Reflex L0 Core",
+      "paths": ["src/kiss_reflex_kernel.cu", "include/guim_kernel.h"],
+      "tests": ["tests/test_latency.cpp"]
+    },
+    {
+      "id": "lovelace_cortex",
+      "name": "Lovelace Cortex L1/L2",
+      "paths": ["src/guim_lovelace_kernel.cu", "include/lovelace_cortex.h"],
+      "tests": ["tests/test_tensor_cores_cortex.cpp", "tests/test_convergence.cpp"]
+    },
+    {
+      "id": "symplectic_sr_mit",
+      "name": "Symplectic Traces (SR-MIT)",
+      "paths": ["src/symplectic_traces_kernel.cu", "include/symplectic_traces.h"],
+      "tests": ["tests/test_symplectic_discovery.cpp"]
+    },
+    {
+      "id": "cbp_plasticity",
+      "name": "CBP Plasticity Sweeper",
+      "paths": ["src/plasticity_sweeper.cu", "include/guim_kernel.h"],
+      "tests": ["tests/test_plasticity.cpp"]
+    },
+    {
+      "id": "ipc_ddwr",
+      "name": "Lock-Free IPC & DDWR",
+      "paths": ["include/ipc_structs_v2.h", "include/ipc_structs_sparse.h", "src/delta_filter.cpp"],
+      "tests": ["tests/test_memory.cpp"]
+    },
+    {
+      "id": "guim_studio",
+      "name": "GuimLab Studio Cockpit",
+      "paths": ["src/studio", "include/guim_studio.h", "include/guim_viewport_session.h"],
+      "tests": ["tests/test_studio_harness.cpp"]
+    },
+    {
+      "id": "agent_harness",
+      "name": "Agent Harness & Optimization",
+      "paths": [".agents/skills/guimlab-studio-harness", "docs/GPU_OPTIMIZATION_LOOP.md"],
+      "tests": ["tests/test_harness_integrity.cpp"]
+    },
+    {
+      "id": "universal_physics_constants",
+      "name": "Universal Physical & Mathematical Invariants",
+      "paths": ["include/guim_physics_constants.h"],
+      "tests": ["tests/test_physics_constants.cpp", "tests/test_scientific_hypotheses.cpp"]
+    }
+  ]
+}

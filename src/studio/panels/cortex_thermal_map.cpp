@@ -1,5 +1,5 @@
 // ============================================================================
-//  cortex_thermal_map.cpp — Lovelace Cortex 256-Neuron Matrix (ANSI TUI)
+//  cortex_thermal_map.cpp — Lovelace Cortex 256-Neuron Dynamic Thermal Heatmap
 //  ============================================================================
 //  Author  : GuimLab Core Team
 //  License : AGPL-3.0 / MIT
@@ -7,60 +7,80 @@
 
 #include "guim_studio.h"
 #include "studio_theme.hpp"
+#include "imgui.h"
+#include "implot.h"
 
-#include <iostream>
-#include <iomanip>
-#include <sstream>
 #include <cmath>
+#include <cstdio>
+#include <vector>
 
 namespace guim::studio {
 
 void render_cortex_thermal_map(StudioTelemetry& telemetry) {
-    std::cout << ansi::CYAN_GLOW << ansi::BOLD << "╔═ [1] LOVELACE CORTEX 256-NEURON MATRIX (TrueColor Heatmap & CBP Plasticity) ═╗\n" << ansi::RESET;
+    ImGui::Begin("Lovelace Cortex 256-Neuron Matrix", nullptr, ImGuiWindowFlags_NoCollapse);
 
+    ImGui::TextColored(colors::NEON_CYAN, "Tensor Core Cortical Activations h_i & CBP Metabolic Plasticity");
+    ImGui::SameLine();
+    ImGui::TextDisabled("| Dohare & Sutton 2024");
+
+    ImGui::Separator();
+
+    static float heatmap_values[16 * 16];
+    static float variance_values[GUIM_STATE_DIM];
+    static float neuron_indices[GUIM_STATE_DIM];
     int dead_count = 0;
-    for (int i = 0; i < GUIM_STATE_DIM; ++i) {
-        if (telemetry.cortex_dead_units[i]) dead_count++;
-    }
 
-    std::cout << "  Active Units : " << ansi::EMERALD << (GUIM_STATE_DIM - dead_count) << "/" << GUIM_STATE_DIM << ansi::RESET;
-    std::cout << "  |  Dead/Saturated: ";
-    if (dead_count > 0) {
-        std::cout << ansi::CRIMSON << ansi::BOLD << dead_count << " (Triggering CBP Neurogenesis)" << ansi::RESET;
-    } else {
-        std::cout << ansi::EMERALD << "0 (100% Plasticity)" << ansi::RESET;
-    }
-    std::cout << "  |  Utility Threshold: eps = 1e-4\n\n";
-
-    // 16x16 Heatmap Grid (8x32 display characters)
-    for (int row = 0; row < 16; ++row) {
-        std::cout << "  ";
-        for (int col = 0; col < 16; ++col) {
-            int idx = row * 16 + col;
-            float val = (idx < GUIM_STATE_DIM) ? telemetry.cortex_activations[idx] : 0.0f;
-            bool is_dead = (idx < GUIM_STATE_DIM) && telemetry.cortex_dead_units[idx];
-
-            std::cout << ansi::heatmap_color(val);
-            if (is_dead) {
-                std::cout << "!!";
-            } else if (std::abs(val) < 0.05f) {
-                std::cout << "  ";
-            } else if (val > 0.0f) {
-                std::cout << "++";
-            } else {
-                std::cout << "--";
+    for (int i = 0; i < 256; ++i) {
+        if (i < GUIM_STATE_DIM) {
+            heatmap_values[i]   = telemetry.cortex_activations[i];
+            variance_values[i]  = telemetry.cortex_variances[i];
+            neuron_indices[i]   = static_cast<float>(i);
+            if (telemetry.cortex_dead_units[i]) {
+                dead_count++;
             }
-            std::cout << ansi::RESET;
+        } else {
+            heatmap_values[i] = 0.0f;
         }
-        std::cout << "  " << ansi::DARK_GRAY << "Row " << std::setw(2) << row << ansi::RESET << "\n";
     }
 
-    std::cout << "\n  Legend: " 
-              << ansi::bg_rgb(0, 180, 220) << ansi::fg_rgb(0, 0, 0) << " -1.0 (Inhibited) " << ansi::RESET << "  "
-              << ansi::bg_rgb(20, 25, 32)  << ansi::fg_rgb(200, 200, 200) << "  0.0 (Quiescent) " << ansi::RESET << "  "
-              << ansi::bg_rgb(255, 190, 20) << ansi::fg_rgb(0, 0, 0) << " +1.0 (Excited) " << ansi::RESET << "  "
-              << ansi::CRIMSON << "[!!] Dead Unit" << ansi::RESET << "\n";
-    std::cout << ansi::CYAN_GLOW << "╚" << std::string(78, '=') << "╝\n\n" << ansi::RESET;
+    // Status Summary Banner
+    ImGui::BeginGroup();
+    ImGui::Text("Active Units: %d / %d", GUIM_STATE_DIM - dead_count, GUIM_STATE_DIM);
+    ImGui::SameLine(180);
+    if (dead_count > 0) {
+        ImGui::TextColored(colors::CRIMSON, "[!] Dead Units: %d (Triggering CBP Neurogenesis)", dead_count);
+    } else {
+        ImGui::TextColored(colors::EMERALD, "[OK] Plasticity: 100%% Active (Zero Saturated Units)");
+    }
+    ImGui::SameLine(580);
+    ImGui::TextDisabled("CBP Utility Threshold: eps = 1e-4");
+    ImGui::EndGroup();
+
+    ImGui::Separator();
+
+    // 16x16 Heatmap via ImPlot with Viridis Colormap
+    if (ImPlot::BeginPlot("##CortexHeatmap", ImVec2(-1, 260), ImPlotFlags_Equal)) {
+        ImPlot::SetupAxes("Cortical Columns (0..15)", "Cortical Rows (0..15)", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
+        ImPlot::SetupAxesLimits(0, 16, 0, 16, ImPlotCond_Always);
+        
+        ImPlot::PushColormap(ImPlotColormap_Viridis);
+        ImPlot::PlotHeatmap("##Heatmap", heatmap_values, 16, 16, -1.0, 1.0, "%.2f", ImPlotPoint(0, 0), ImPlotPoint(16, 16));
+        ImPlot::PopColormap();
+        
+        ImPlot::EndPlot();
+    }
+
+    // Metabolic Variance Distribution Bar Chart
+    ImGui::TextDisabled("Neuron Metabolic Variance sigma_i^2 (Plasticity Watchdog)");
+    if (ImPlot::BeginPlot("##VarianceDistribution", ImVec2(-1, 100))) {
+        ImPlot::SetupAxes("Neuron ID", "Variance sigma^2", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
+        ImPlot::SetupAxesLimits(-0.5, GUIM_STATE_DIM - 0.5, 0.0, 0.25, ImPlotCond_Always);
+        ImPlot::PlotBars("Variance", neuron_indices, variance_values, GUIM_STATE_DIM, 0.6, 
+                         {ImPlotProp_FillColor, colors::EMERALD});
+        ImPlot::EndPlot();
+    }
+
+    ImGui::End();
 }
 
 } // namespace guim::studio

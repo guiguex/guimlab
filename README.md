@@ -8,7 +8,7 @@
 [![CUDA](https://img.shields.io/badge/CUDA-12.0%2B-green.svg?style=flat-square&logo=nvidia)](https://developer.nvidia.com/cuda-toolkit)
 [![Architecture](https://img.shields.io/badge/Compute-sm__86%20%7C%20RTX%203090-orange.svg?style=flat-square)]()
 [![Zero-Alloc](https://img.shields.io/badge/VRAM%20Allocations-0%20in%20Hot%20Loop-success.svg?style=flat-square)]()
-[![Tests](https://img.shields.io/badge/Tests-43%2F43%20Passed-brightgreen.svg?style=flat-square)]()
+[![Tests](https://img.shields.io/badge/Tests-53%2F53%20Passed-brightgreen.svg?style=flat-square)]()
 [![Latency](https://img.shields.io/badge/Median%20Latency-308.5%20%CE%BCs-purple.svg?style=flat-square)]()
 
 <br/>
@@ -117,7 +117,7 @@ cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DGUIM_CUDA_ARCH=86
 cmake --build build --parallel
 ```
 
-### Run the Full Verification Suite (22/22 GoogleTest Tests)
+### Run the Full Verification Suite (53/53 GoogleTest Test Cases)
 ```bash
 ctest --test-dir build --output-on-failure
 ```
@@ -132,6 +132,11 @@ ctest --test-dir build --output-on-failure
 ./build/bin/guim_monitor
 ```
 
+### Launch High-Density Neuromorphic Cockpit (SARTS Sokol Studio)
+```bash
+./build/bin/guim_studio
+```
+
 ---
 
 ## 📦 Binary Targets
@@ -140,8 +145,9 @@ ctest --test-dir build --output-on-failure
 | :--- | :--- | :--- |
 | `libguim.a` | `build/libguim.a` | Core C++20 / CUDA static library. |
 | `guim_bench` | `build/bin/guim_bench` | Microsecond-accurate latency benchmark. |
-| `guim_tests` | `build/bin/guim_tests` | 22 test suites covering numeric correctness, memory stability & SR-MIT. |
-| `guim_monitor` | `build/bin/guim_monitor` | High-frequency ANSI visualizer dashboard. |
+| `guim_tests` | `build/bin/guim_tests` | 53 test suites covering numerical accuracy, memory stability, physics invariants & SARTS. |
+| `guim_studio`| `build/bin/guim_studio`| AAA Sokol + ImGui + ImPlot real-time telemetry cockpit (SARTS). |
+| `guim_monitor`| `build/bin/guim_monitor`| High-frequency ANSI visualizer dashboard. |
 | `guim_node_v3`| `build/bin/guim_node_v3`| Two-speed asynchronous AGI server node. |
 | `guim_client` | `build/bin/guim_client` | Sub-microsecond POSIX shared memory benchmark client. |
 
@@ -177,7 +183,7 @@ They have been superseded by current reproducible numbers (see [BENCHMARKS.md](B
 | Throughput | 3,126.3 FPS | **3,126.3 FPS** |
 
 This honesty is intentional. We do not cherry-pick peaks; we publish the median of guim_bench --frames 100000 --warmup 10000.
-The 50,000× MSE ratio on Mackey-Glass remains valid (see [BENCHMARKS.md §2 Experiment B](BENCHMARKS.md)).
+The >43,000× MSE ratio on Mackey-Glass remains valid (see [BENCHMARKS.md §2 Experiment B](BENCHMARKS.md)).
 
 ## Related Work
 

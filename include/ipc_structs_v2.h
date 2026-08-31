@@ -37,7 +37,7 @@ struct alignas(64) GuimSharedMemoryV2 {
     alignas(64) float serotonin;
 
     // ---- CHANNEL 3: METADATA (CPU -> GPU) ----
-    alignas(64) std::uint64_t timestamp_ns;
+    alignas(64) volatile std::uint64_t timestamp_ns;
     alignas(64) volatile std::uint64_t seq_in;
 
     // ---- CHANNEL 4: MOTOR REFLEX (GPU Reflex -> CPU) ----

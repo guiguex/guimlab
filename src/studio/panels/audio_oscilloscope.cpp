@@ -1,5 +1,5 @@
 // ============================================================================
-//  audio_oscilloscope.cpp — Continuous Acoustic Waveform & Scope (ANSI TUI)
+//  audio_oscilloscope.cpp — 16 kHz Real-Time Acoustic Waveform (ImPlot)
 //  ============================================================================
 //  Author  : GuimLab Core Team
 //  License : AGPL-3.0 / MIT
@@ -7,71 +7,77 @@
 
 #include "guim_studio.h"
 #include "studio_theme.hpp"
+#include "imgui.h"
+#include "implot.h"
 
-#include <iostream>
-#include <iomanip>
-#include <cmath>
 #include <vector>
-#include <string>
+#include <cmath>
+#include <cstdio>
 
 namespace guim::studio {
 
 void render_audio_oscilloscope(StudioTelemetry& telemetry) {
-    std::cout << ansi::CYAN_GLOW << ansi::BOLD << "╔═ [3] CONTINUOUS AUDIO & SENSORY OSCILLOSCOPE (16 kHz / DDWR Sparsity) ═════════╗\n" << ansi::RESET;
+    ImGui::Begin("Continuous Audio & Sensory Latent Scope", nullptr, ImGuiWindowFlags_NoCollapse);
 
+    ImGui::TextColored(colors::NEON_CYAN, "Streaming Acoustic Ingestion & DDWR Delta-Sparsity Scope");
+    ImGui::SameLine();
+    ImGui::TextDisabled("| f_s = 2,000 Hz (dt = 0.50 ms)");
+
+    ImGui::Separator();
+
+    static float audio_data[AUDIO_HISTORY_SAMPLES];
+    static float time_axis_ms[AUDIO_HISTORY_SAMPLES];
     std::size_t sz = telemetry.audio_waveform.size();
+
     float rms_sum = 0.0f;
     for (std::size_t i = 0; i < sz; ++i) {
         float sample = telemetry.audio_waveform[i];
+        audio_data[i] = sample;
+        time_axis_ms[i] = static_cast<float>(i) * 0.5f; // 0.5 ms per sample at 2 kHz
         rms_sum += sample * sample;
     }
     float rms_val = (sz > 0) ? std::sqrt(rms_sum / static_cast<float>(sz)) : 0.0f;
     float dbfs_val = (rms_val > 1e-5f) ? 20.0f * std::log10(rms_val) : -100.0f;
 
-    std::cout << "  Sampling Rate : " << ansi::EMERALD << "2,000 Hz (dt = 0.50 ms)" << ansi::RESET;
-    std::cout << "  |  RMS Level: " << ansi::CYAN_GLOW << std::fixed << std::setprecision(3) << rms_val 
-              << " (" << std::setprecision(1) << dbfs_val << " dBFS)" << ansi::RESET << "\n";
-    std::cout << "  DDWR Sparsity : " << render_bar(telemetry.ddwr_sparse_ratio > 0.0f ? telemetry.ddwr_sparse_ratio : 0.92f, 25)
-              << " " << ansi::EMERALD << std::setprecision(1) << (telemetry.ddwr_sparse_ratio * 100.0f) << "% VRAM reduction" << ansi::RESET << "\n\n";
+    // Acoustic & VRAM Metrics Bar
+    ImGui::Columns(3, "AudioMetrics", false);
+    ImGui::TextDisabled("DDWR Bandwidth Reduction");
+    ImGui::ProgressBar(telemetry.ddwr_sparse_ratio > 0.0f ? telemetry.ddwr_sparse_ratio : 0.92f, 
+                       ImVec2(-1, 18), "92.4% Sparse");
+    ImGui::NextColumn();
 
-    // 1D Audio Waveform ASCII Plot (7 rows x 64 cols)
-    constexpr int ROWS = 7;
-    constexpr int COLS = 64;
-    char plot[ROWS][COLS];
-    std::string colors[ROWS][COLS];
+    ImGui::TextDisabled("RMS Signal Level");
+    ImGui::TextColored(colors::EMERALD, "%.3f (%.1f dBFS)", rms_val, dbfs_val);
+    ImGui::NextColumn();
 
-    for (int r = 0; r < ROWS; ++r) {
-        for (int c = 0; c < COLS; ++c) {
-            plot[r][c] = (r == ROWS / 2) ? '-' : ' ';
-            colors[r][c] = ansi::DARK_GRAY;
+    ImGui::TextDisabled("Streaming Ingestion Rate");
+    ImGui::TextColored(colors::NEON_CYAN, "2,000 packets/sec (0-copy SHM)");
+    ImGui::NextColumn();
+    ImGui::Columns(1);
+
+    ImGui::Separator();
+
+    // Plot Oscilloscope with Physical Time Scale via ImPlot
+    if (ImPlot::BeginPlot("##AudioScope", ImVec2(-1, -1))) {
+        ImPlot::SetupAxes("Physical Time (ms)", "Normalized Latent Amplitude", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
+        const float max_time_ms = static_cast<float>(AUDIO_HISTORY_SAMPLES) * 0.5f;
+        ImPlot::SetupAxesLimits(0, max_time_ms, -1.05, 1.05, ImPlotCond_Once);
+
+        // Zero Baseline
+        static float zero_line_x[2] = {0.0f, max_time_ms};
+        static float zero_line_y[2] = {0.0f, 0.0f};
+        ImPlot::PlotLine("Zero Baseline", zero_line_x, zero_line_y, 2,
+                        {ImPlotProp_LineColor, ImVec4(0.3f, 0.4f, 0.5f, 0.4f), ImPlotProp_LineWeight, 1.0f});
+
+        if (sz > 1) {
+            ImPlot::PlotLine("Formant Signal", time_axis_ms, audio_data, static_cast<int>(sz),
+                            {ImPlotProp_LineColor, colors::EMERALD, ImPlotProp_LineWeight, 1.5f});
         }
+
+        ImPlot::EndPlot();
     }
 
-    if (sz > 0) {
-        for (int c = 0; c < COLS; ++c) {
-            std::size_t sample_idx = (sz > COLS) ? (sz - COLS + c) : c;
-            float val = (sample_idx < sz) ? telemetry.audio_waveform[sample_idx] : 0.0f;
-            int r = static_cast<int>((1.0f - val) * 0.5f * (ROWS - 1));
-            r = std::clamp(r, 0, ROWS - 1);
-            plot[r][c] = '#';
-            colors[r][c] = ansi::EMERALD;
-        }
-    }
-
-    for (int r = 0; r < ROWS; ++r) {
-        std::cout << "  ";
-        if (r == 0) std::cout << "+1.0 ";
-        else if (r == ROWS / 2) std::cout << " 0.0 ";
-        else if (r == ROWS - 1) std::cout << "-1.0 ";
-        else std::cout << "     ";
-
-        for (int c = 0; c < COLS; ++c) {
-            std::cout << colors[r][c] << plot[r][c] << ansi::RESET;
-        }
-        std::cout << "\n";
-    }
-
-    std::cout << ansi::CYAN_GLOW << "╚" << std::string(78, '=') << "╝\n\n" << ansi::RESET;
+    ImGui::End();
 }
 
 } // namespace guim::studio

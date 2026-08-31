@@ -40,14 +40,25 @@ constexpr float SILVER_RATIO_DELTA      = 2.4142135623730950488f;
 constexpr float KAM_NOBLE_EXPONENT      = 0.6180339887498948482f;
 
 // ----------------------------------------------------------------------------
-//  3. Feigenbaum Criticality Constants (Edge-of-Chaos Self-Organization)
+//  3. Critical Plasticity Heuristics (Empirical — NOT Feigenbaum-derived)
 // ----------------------------------------------------------------------------
-// Feigenbaum delta: universal period-doubling scaling factor
+// Feigenbaum delta: universal period-doubling scaling factor (kept for reference)
+//   NOTE: Feigenbaum delta describes bifurcation INTERVAL scaling (mu_n - mu_{n-1})
+//   in 1D maps; it is NOT a derivation source for EMA decay constants.
 constexpr float FEIGENBAUM_DELTA        = 4.6692016091029906718f;
-// Feigenbaum alpha: universal phase-space scaling factor
+// Feigenbaum alpha: universal phase-space scaling factor (kept for reference)
+//   NOTE: Feigenbaum alpha describes phase-space ATTRACTOR scaling; combining
+//   it arithmetically with delta yields a number with no theoretical meaning.
 constexpr float FEIGENBAUM_ALPHA        = 2.5029078750958928222f;
-// Critical EMA decay constant for CBP metabolic variance tracking
-constexpr float FEIGENBAUM_CRITICAL_EMA = 1.0f - (1.0f / (FEIGENBAUM_DELTA * FEIGENBAUM_ALPHA)); // ~0.91443
+// Empirical critical EMA decay constant for CBP variance tracking.
+//   HONEST CAVEAT: This value is an arithmetically assembled heuristic
+//   (1 - 1/(delta*alpha) ≈ 0.91443), NOT derived from Feigenbaum period-
+//   doubling theory. It coincidentally falls in the empirical [0.9, 0.95]
+//   band used in critical plasticity literature. The actual Feigenbaum-derived
+//   decay rate at the accumulation point is 1 - 1/delta ≈ 0.7858 (Lyapunov
+//   decay), which is mathematically different. Treat CRITICAL_EMA_HEURISTIC
+//   as an empirical tuning constant; do not cite it as theoretically grounded.
+constexpr float CRITICAL_EMA_HEURISTIC  = 1.0f - (1.0f / (FEIGENBAUM_DELTA * FEIGENBAUM_ALPHA)); // ~0.91443
 
 // ----------------------------------------------------------------------------
 //  4. Continuous Analysis & Spectral Summation Invariants
@@ -73,7 +84,7 @@ constexpr float BOLTZMANN_THERMAL_KB    = 1.380649000e-3f;
 // ----------------------------------------------------------------------------
 static_assert(GOLDEN_RATIO_PHI > 1.618f && GOLDEN_RATIO_PHI < 1.619f, "Golden ratio precision fault");
 static_assert(GOLDEN_RATIO_INV > 0.618f && GOLDEN_RATIO_INV < 0.619f, "Golden ratio inverse precision fault");
-static_assert(FEIGENBAUM_CRITICAL_EMA > 0.90f && FEIGENBAUM_CRITICAL_EMA < 0.95f, "Feigenbaum EMA out of bounds");
+static_assert(CRITICAL_EMA_HEURISTIC > 0.90f && CRITICAL_EMA_HEURISTIC < 0.95f, "Critical EMA heuristic out of bounds");
 static_assert(COULOMB_K_CONSTANT > 0.0f, "Coulomb constant must be strictly positive");
 
 } // namespace guim::physics

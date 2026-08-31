@@ -9,6 +9,13 @@
 //    - Per-Synapse TMD-ET / IDBD Learning Rate Dial & Attention Barometer
 //    - Hardware Cycle-Accurate Latency Profiler & VRAM Leak Sentinel
 //
+//  THREADING & CONCURRENCY MODEL:
+//    - All UI rendering and panel functions (`render_*`) execute strictly in
+//      the single-threaded Sokol event loop (`frame_cb`).
+//    - Static rendering buffers in panel files are deliberately used to ensure
+//      zero dynamic allocations on the rendering hot path; they are safe
+//      due to serial execution on the main UI thread.
+//
 //  Author  : GuimLab Core Team
 //  License : AGPL-3.0 / MIT
 // ============================================================================
