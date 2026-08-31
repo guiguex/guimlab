@@ -59,3 +59,4 @@ test_session_output*.json
 # Local secrets (if any)
 .env
 .env.local
+.wrangler/cache/wrangler-account.json

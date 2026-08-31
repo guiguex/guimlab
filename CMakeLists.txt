@@ -13,8 +13,19 @@ project(guimlab
 # ----------------------------------------------------------------------------
 set(CMAKE_CXX_STANDARD          20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS        OFF)
+
 set(CMAKE_CUDA_STANDARD         20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_EXTENSIONS       OFF)
+
+# Compatibility: CMake < 3.25 does not support CUDA_STANDARD 20 in internal tables
+if(CMAKE_VERSION VERSION_LESS "3.25")
+    set(CMAKE_CUDA_STANDARD 17)
+endif()
+
+option(GUIM_BUILD_TESTS "Build verification test suite" ON)
+option(GUIM_BUILD_BENCH "Build benchmark suite" ON)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
@@ -82,11 +93,13 @@ set_target_properties(guim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # ----------------------------------------------------------------------------
 #  Benchmark Executable: guim_bench
 # ----------------------------------------------------------------------------
-add_executable(guim_bench tests/bench_main.cpp)
-target_link_libraries(guim_bench PRIVATE guim)
-target_include_directories(guim_bench PRIVATE include)
-target_compile_options(guim_bench PRIVATE ${GUIM_CXX_FLAGS})
-set_target_properties(guim_bench PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+if(GUIM_BUILD_BENCH)
+    add_executable(guim_bench tests/bench_main.cpp)
+    target_link_libraries(guim_bench PRIVATE guim)
+    target_include_directories(guim_bench PRIVATE include)
+    target_compile_options(guim_bench PRIVATE ${GUIM_CXX_FLAGS})
+    set_target_properties(guim_bench PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+endif()
 
 # ----------------------------------------------------------------------------
 #  Real-World Audio Streaming Demo: stream_wav_demo
@@ -152,48 +165,50 @@ set_target_properties(guim_studio PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_B
 # ----------------------------------------------------------------------------
 #  GoogleTest Suite: guim_tests
 # ----------------------------------------------------------------------------
-include(FetchContent)
-FetchContent_Declare(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        v1.14.0
-    GIT_SHALLOW    TRUE
-)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
+if(GUIM_BUILD_TESTS)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG        v1.14.0
+        GIT_SHALLOW    TRUE
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
 
-enable_testing()
+    enable_testing()
 
-add_executable(guim_tests
-    tests/test_correctness.cpp
-    tests/test_latency.cpp
-    tests/test_plasticity.cpp
-    tests/test_convergence.cpp
-    tests/test_memory.cpp
-    tests/test_episodic_vsa.cpp
-    tests/test_global_workspace.cpp
-    tests/test_world_model.cpp
-    tests/test_symplectic_discovery.cpp
-    tests/test_tensor_cores_cortex.cpp
-    tests/test_studio_harness.cpp
-    tests/test_harness_integrity.cpp
-    tests/test_physics_constants.cpp
-    tests/test_scientific_hypotheses.cpp
-    tests/test_sarts_ring_buffer.cpp
-    src/studio/shm_client.cpp
-    src/studio/viewport_session.cpp
-)
+    add_executable(guim_tests
+        tests/test_correctness.cpp
+        tests/test_latency.cpp
+        tests/test_plasticity.cpp
+        tests/test_convergence.cpp
+        tests/test_memory.cpp
+        tests/test_episodic_vsa.cpp
+        tests/test_global_workspace.cpp
+        tests/test_world_model.cpp
+        tests/test_symplectic_discovery.cpp
+        tests/test_tensor_cores_cortex.cpp
+        tests/test_studio_harness.cpp
+        tests/test_harness_integrity.cpp
+        tests/test_physics_constants.cpp
+        tests/test_scientific_hypotheses.cpp
+        tests/test_sarts_ring_buffer.cpp
+        src/studio/shm_client.cpp
+        src/studio/viewport_session.cpp
+    )
 
-target_link_libraries(guim_tests PRIVATE guim gtest_main)
-target_include_directories(guim_tests PRIVATE include tests src/studio)
-target_compile_options(guim_tests PRIVATE ${GUIM_CXX_FLAGS})
-if(UNIX)
-    target_link_libraries(guim_tests PRIVATE rt pthread)
+    target_link_libraries(guim_tests PRIVATE guim gtest_main)
+    target_include_directories(guim_tests PRIVATE include tests src/studio)
+    target_compile_options(guim_tests PRIVATE ${GUIM_CXX_FLAGS})
+    if(UNIX)
+        target_link_libraries(guim_tests PRIVATE rt pthread)
+    endif()
+    set_target_properties(guim_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+    include(GoogleTest)
+    gtest_discover_tests(guim_tests)
 endif()
-set_target_properties(guim_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-
-include(GoogleTest)
-gtest_discover_tests(guim_tests)
 
 # ----------------------------------------------------------------------------
 #  Server & Client Nodes & Visualizers (Linux / POSIX)

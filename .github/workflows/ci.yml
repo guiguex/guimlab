@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 #  .github/workflows/ci.yml — Continuous Integration for guimlab
 #  ==============================================================================
 #  Runs on every push and PR.  Three jobs:
@@ -64,7 +64,7 @@ jobs:
               -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
               -DCMAKE_CUDA_ARCHITECTURES="${{env.CUDA_ARCH}}" \
               -DGUIM_BUILD_TESTS=ON \
-              -DGUIM_BUILD_BENCH=OFF  # skip bench (no GPU in CI)
+              -DGUIM_BUILD_BENCH=OFF
 
       - name: CMake build
         run: cmake --build build --parallel
