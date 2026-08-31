@@ -107,7 +107,6 @@ extern "C" float guim_cpu_step(GuimCpuRef* r, const float* input, float* output)
         if (r->utility[row] < GUIM_PLASTICITY_THRESHOLD) {
             ++r->resets_count;
             r->utility[row] = 0.1f;
-            const float scale = std::sqrt(2.0f / static_cast<float>(GUIM_TOTAL_DIM));
             for (int col = 0; col < GUIM_TOTAL_DIM; ++col) {
                 const int idx = w_base + col;
                 r->weights[idx]     = 0.0f;

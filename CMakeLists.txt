@@ -19,11 +19,6 @@ set(CMAKE_CUDA_STANDARD         20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_EXTENSIONS       OFF)
 
-# Compatibility: CMake < 3.25 does not support CUDA_STANDARD 20 in internal tables
-if(CMAKE_VERSION VERSION_LESS "3.25")
-    set(CMAKE_CUDA_STANDARD 17)
-endif()
-
 option(GUIM_BUILD_TESTS "Build verification test suite" ON)
 option(GUIM_BUILD_BENCH "Build benchmark suite" ON)
 
@@ -50,11 +45,11 @@ guim_setup_cuda_architectures()
 #  Flags
 # ----------------------------------------------------------------------------
 if(MSVC)
-    set(GUIM_CXX_FLAGS /O2 /W4 /EHsc)
-    set(GUIM_CUDA_FLAGS -O3 --use_fast_math -Xptxas -v)
+    set(GUIM_CXX_FLAGS /O2 /W4 /EHsc /std:c++20)
+    set(GUIM_CUDA_FLAGS -O3 --use_fast_math -Xptxas -v -std=c++20)
 else()
-    set(GUIM_CXX_FLAGS -O3 -Wall -Wextra -Wno-unused-parameter -mavx2)
-    set(GUIM_CUDA_FLAGS -O3 --use_fast_math -Xptxas -v)
+    set(GUIM_CXX_FLAGS -O3 -Wall -Wextra -Wno-unused-parameter -mavx2 -std=c++20)
+    set(GUIM_CUDA_FLAGS -O3 --use_fast_math -Xptxas -v -std=c++20)
 endif()
 
 # ----------------------------------------------------------------------------

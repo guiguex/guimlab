@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <cstring>
 #include <chrono>
+#include <new>
 
 // -----------------------------------------------------------------------------
 //  Internal State Definition
