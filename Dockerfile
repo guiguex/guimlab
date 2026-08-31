@@ -17,12 +17,12 @@ FROM nvidia/cuda:12.6.0-devel-ubuntu22.04 AS builder
 
 # Toolchain + Python (Python is just for benchmark plotting scripts)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        cmake \
         ninja-build \
         git \
         ca-certificates \
         python3 \
         python3-pip \
+    && pip install cmake \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # Working directory
