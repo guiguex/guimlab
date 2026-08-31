@@ -15,9 +15,13 @@ set(CMAKE_CXX_STANDARD          20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS        OFF)
 
-set(CMAKE_CUDA_STANDARD         20)
-set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-set(CMAKE_CUDA_EXTENSIONS       OFF)
+# CMake < 3.25 internal tables only know CUDA standards up to 17.
+# For all CMake versions, C++20 for CUDA is enforced via GUIM_CUDA_FLAGS.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25")
+    set(CMAKE_CUDA_STANDARD         20)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    set(CMAKE_CUDA_EXTENSIONS       OFF)
+endif()
 
 option(GUIM_BUILD_TESTS "Build verification test suite" ON)
 option(GUIM_BUILD_BENCH "Build benchmark suite" ON)
@@ -49,7 +53,7 @@ if(MSVC)
     set(GUIM_CUDA_FLAGS -O3 --use_fast_math -Xptxas -v -std=c++20)
 else()
     set(GUIM_CXX_FLAGS -O3 -Wall -Wextra -Wno-unused-parameter -mavx2 -std=c++20)
-    set(GUIM_CUDA_FLAGS -O3 --use_fast_math -Xptxas -v -std=c++20)
+    set(GUIM_CUDA_FLAGS -O3 --use_fast_math -Xptxas -v -std=c++20 -Xcompiler=-std=c++20)
 endif()
 
 # ----------------------------------------------------------------------------
