@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 //  ipc_structs.h — POSIX SHM + CUDA zero-copy IPC layout
 //  ---------------------------------------------------------------------------
 //  Lock-free ring of (input → output) frames between a CPU client and a
@@ -38,7 +38,7 @@
 //    *  Server : nvcc -O3 -use_fast_math -std=c++20 persistent_kernel.cu
 //    *  Client : g++  -O3 -std=c++20 -mavx2 client.cpp -lrt
 //
-//  Author        : Guillaume Meingan + Claude (ultracode session 2026-08-31)
+//  Author        : Guillaume Meingan <guillaume@guig.dev>
 //  License       : AGPL-3.0
 // ============================================================================
 
@@ -51,10 +51,21 @@
 //  Architecture constants — kept in sync with src/persistent_kernel.cu
 // ----------------------------------------------------------------------------
 
+#ifndef GUIM_STATE_DIM
 constexpr int GUIM_STATE_DIM = 256;
+#endif
+
+#ifndef GUIM_INPUT_DIM
 constexpr int GUIM_INPUT_DIM = 128;
+#endif
+
+#ifndef GUIM_TOTAL_IN
 constexpr int GUIM_TOTAL_IN  = GUIM_INPUT_DIM + GUIM_STATE_DIM;  // 384
+#endif
+
+#ifndef GUIM_TOTAL_W
 constexpr int GUIM_TOTAL_W   = GUIM_STATE_DIM * GUIM_TOTAL_IN;   // 98304
+#endif
 
 // ----------------------------------------------------------------------------
 //  Cache-line-aligned shared structure

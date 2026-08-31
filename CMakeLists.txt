@@ -78,6 +78,18 @@ target_compile_options(guim_bench PRIVATE ${GUIM_CXX_FLAGS})
 set_target_properties(guim_bench PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # ----------------------------------------------------------------------------
+#  Real-World Audio Streaming Demo: stream_wav_demo
+# ----------------------------------------------------------------------------
+add_executable(stream_wav_demo examples/stream_wav_demo.cpp)
+target_link_libraries(stream_wav_demo PRIVATE guim)
+target_include_directories(stream_wav_demo PRIVATE include)
+target_compile_options(stream_wav_demo PRIVATE ${GUIM_CXX_FLAGS})
+if(UNIX)
+    target_link_libraries(stream_wav_demo PRIVATE rt pthread)
+endif()
+set_target_properties(stream_wav_demo PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+# ----------------------------------------------------------------------------
 #  GoogleTest Suite: guim_tests
 # ----------------------------------------------------------------------------
 include(FetchContent)
