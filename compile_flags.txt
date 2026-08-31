@@ -1,0 +1,10 @@
+-std=c++20
+-Iinclude
+-Iinclude/guim
+-Itests
+-Isrc
+-IC:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include
+-DGUIM_INPUT_DIM=64
+-DGUIM_STATE_DIM=256
+-DGUIM_REFLEX_MOTORS=32
+-xc++

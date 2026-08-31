@@ -21,13 +21,17 @@
 #include <thread>
 #include <algorithm>
 #include <vector>
+#include <csignal>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <csignal>
+#endif
 
-#include "ipc_structs.h"
 #include "ipc_structs_v2.h"
 
 static volatile bool g_running = true;
@@ -61,20 +65,43 @@ void render_bar(float value, int width = 16) {
 
 int main() {
     std::signal(SIGINT, sig_handler);
+#ifdef SIGTERM
     std::signal(SIGTERM, sig_handler);
+#endif
 
-    constexpr const char* SHM_NAME = "/guim_ipc_v3_shm";
-    int shm_fd = ::shm_open(SHM_NAME, O_RDWR, 0666);
+#ifdef _WIN32
+    // Enable ANSI color processing on Windows Terminal / cmd
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut != INVALID_HANDLE_VALUE) {
+        DWORD dwMode = 0;
+        if (GetConsoleMode(hOut, &dwMode)) {
+            SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        }
+    }
+#endif
+
     volatile GuimSharedMemoryV2* ipc = nullptr;
     bool standalone_mock = false;
     GuimSharedMemoryV2 mock_shm{};
-
+#ifdef _WIN32
+    HANDLE hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, "Local\\guim_ipc_v3_shm");
+    if (hMapFile) {
+        void* mapped = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(GuimSharedMemoryV2));
+        if (mapped) {
+            ipc = reinterpret_cast<volatile GuimSharedMemoryV2*>(mapped);
+        }
+    }
+#else
+    int shm_fd = -1;
+    constexpr const char* SHM_NAME = "/guim_ipc_v3_shm";
+    shm_fd = ::shm_open(SHM_NAME, O_RDWR, 0666);
     if (shm_fd >= 0) {
         void* mapped = ::mmap(nullptr, sizeof(GuimSharedMemoryV2), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
         if (mapped != MAP_FAILED) {
             ipc = reinterpret_cast<volatile GuimSharedMemoryV2*>(mapped);
         }
     }
+#endif
 
     if (!ipc) {
         ipc = &mock_shm;
@@ -190,8 +217,13 @@ int main() {
 
     std::printf(ANSI_SHOW_CURSOR "\n");
     if (!standalone_mock && ipc) {
+#ifdef _WIN32
+        UnmapViewOfFile(const_cast<GuimSharedMemoryV2*>(ipc));
+        if (hMapFile) CloseHandle(hMapFile);
+#else
         ::munmap(const_cast<GuimSharedMemoryV2*>(ipc), sizeof(GuimSharedMemoryV2));
-        ::close(shm_fd);
+        if (shm_fd >= 0) ::close(shm_fd);
+#endif
     }
     return 0;
 }
