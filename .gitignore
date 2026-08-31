@@ -2,6 +2,7 @@
 build/
 out/
 dist/
+.serena/
 
 # CMake intermediates
 CMakeCache.txt
