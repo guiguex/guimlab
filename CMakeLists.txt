@@ -16,11 +16,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS        OFF)
 
 # CMake < 3.25 internal tables only know CUDA standards up to 17.
-# For all CMake versions, C++20 for CUDA is enforced via GUIM_CUDA_FLAGS.
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25")
     set(CMAKE_CUDA_STANDARD         20)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     set(CMAKE_CUDA_EXTENSIONS       OFF)
+else()
+    set(CMAKE_CUDA_STANDARD         17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED OFF)
 endif()
 
 option(GUIM_BUILD_TESTS "Build verification test suite" ON)
