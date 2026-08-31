@@ -1,19 +1,18 @@
 CompileFlags:
-  CompilationDatabase: "."
   Add:
     - "-std=c++20"
     - "-Iinclude"
+    - "-Iinclude/guim"
     - "-Itests"
     - "-Isrc"
+    - "-IC:/mingw/mingw64/include/c++/14.2.0"
+    - "-IC:/mingw/mingw64/include/c++/14.2.0/x86_64-w64-mingw32"
+    - "-IC:/mingw/mingw64/include/c++/14.2.0/backward"
+    - "-IC:/mingw/mingw64/x86_64-w64-mingw32/include"
+    - "-IC:/mingw/mingw64/include"
+    - "-IC:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include"
     - "-DGUIM_INPUT_DIM=64"
     - "-DGUIM_STATE_DIM=256"
     - "-DGUIM_REFLEX_MOTORS=32"
     - "-Wno-unknown-attributes"
     - "-Wno-unused-parameter"
-
-Diagnostics:
-  Suppress:
-    - "pp_file_not_found"
-    - "fatal_too_many_errors"
-    - "drv_no_cuda_installation"
-    - "drv_no_cuda_libdevice"
