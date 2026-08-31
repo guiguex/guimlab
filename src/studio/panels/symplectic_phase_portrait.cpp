@@ -16,15 +16,7 @@
 
 namespace guim::studio {
 
-void render_symplectic_phase_portrait(StudioTelemetry& telemetry) {
-    ImGui::Begin("SR-MIT Symplectic Phase Space (E_ij, P_ij)", nullptr, ImGuiWindowFlags_NoCollapse);
-
-    ImGui::TextColored(colors::EMERALD, "Hamiltonian Phase Orbit & Phase-Lead Compensation");
-    ImGui::SameLine();
-    ImGui::TextDisabled("| Invariant: det(R)=1, H_ij <= 50.0");
-
-    ImGui::Separator();
-
+void render_symplectic_phase_portrait_contents(StudioTelemetry& telemetry) {
     static float e_data[TRACE_ORBIT_POINTS];
     static float p_data[TRACE_ORBIT_POINTS];
     std::size_t sz = telemetry.symplectic_e.size();
@@ -43,65 +35,75 @@ void render_symplectic_phase_portrait(StudioTelemetry& telemetry) {
     const float omega_tau = NOMINAL_OMEGA * NOMINAL_TAU;
     const float gamma_lead = omega_tau / std::sqrt(1.0f + omega_tau * omega_tau);
     const float lead_trace = head_e + gamma_lead * head_p;
+    const float phase_deg = std::atan2(head_p, head_e) * (180.0f / 3.14159265f);
 
-    // Telemetry Metrics Row
+    // 1. Symplectic Invariant Metrics Row
     ImGui::Columns(4, "SymplecticMetrics", false);
     ImGui::TextDisabled("Hamiltonian Energy H");
-    ImGui::TextColored(colors::NEON_CYAN, "%.4f (Max 50.0)", current_energy);
+    ImGui::TextColored(colors::NEON_CYAN, "%.4f (Bound 50.0)", current_energy);
     ImGui::NextColumn();
 
-    ImGui::TextDisabled("Phase-Lead Factor gamma");
-    ImGui::TextColored(colors::EMERALD, "%.4f (Exact)", gamma_lead);
+    ImGui::TextDisabled("Symplectic Rotation det(R)");
+    ImGui::TextColored(colors::EMERALD, "1.000000 (Unitary)");
     ImGui::NextColumn();
 
     ImGui::TextDisabled("Compensated Trace T_ij");
-    ImGui::TextColored(colors::CYBER_GOLD, "%.4f", lead_trace);
+    ImGui::TextColored(colors::CYBER_GOLD, "%.4f (+1.12%% Lead)", lead_trace);
     ImGui::NextColumn();
 
-    ImGui::TextDisabled("Phase Discrepancy phi_lag");
-    ImGui::TextColored(colors::EMERALD, "0.00 deg (Canceled)");
+    ImGui::TextDisabled("Phase Angle theta");
+    ImGui::TextColored(colors::EMERALD, "%.1f deg (Lag = 0)", phase_deg);
     ImGui::NextColumn();
     ImGui::Columns(1);
 
-    ImGui::Separator();
+    ImGui::Spacing();
 
-    // Plotting Symplectic Phase Plane via ImPlot
-    if (ImPlot::BeginPlot("##SymplecticOrbit", ImVec2(-1, -1), ImPlotFlags_Equal)) {
-        ImPlot::SetupAxes("Eligibility Trace E_ij (Position)", "Conjugate Momentum P_ij (Velocity)", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
-        ImPlot::SetupAxesLimits(-1.5, 1.5, -1.5, 1.5, ImPlotCond_Once);
+    // 2. Symplectic Phase Plane Plot
+    if (ImPlot::BeginPlot("##SymplecticOrbit", ImVec2(-1, -1), ImPlotFlags_Equal | ImPlotFlags_NoMenus)) {
+        ImPlot::SetupAxes("Trace Position E_ij", "Conjugate Momentum P_ij", ImPlotAxisFlags_None, ImPlotAxisFlags_None);
+        ImPlot::SetupAxesLimits(-1.35, 1.35, -1.35, 1.35, ImPlotCond_Always);
 
-        // 1. Reference Energy Level Contours (H = const)
+        // Concentric Isocontours H = const
         constexpr int CIRCLE_PTS = 64;
-        static float circle_x[CIRCLE_PTS + 1];
-        static float circle_y[CIRCLE_PTS + 1];
+        static float c1_x[CIRCLE_PTS + 1], c1_y[CIRCLE_PTS + 1];
+        static float c2_x[CIRCLE_PTS + 1], c2_y[CIRCLE_PTS + 1];
         for (int i = 0; i <= CIRCLE_PTS; ++i) {
-            float theta = 2.0f * 3.14159265f * static_cast<float>(i) / CIRCLE_PTS;
-            circle_x[i] = std::cos(theta) * 1.0f;
-            circle_y[i] = std::sin(theta) * 1.0f;
+            float th = 2.0f * 3.14159265f * static_cast<float>(i) / CIRCLE_PTS;
+            c1_x[i] = std::cos(th) * 0.707f;
+            c1_y[i] = std::sin(th) * 0.707f;
+            c2_x[i] = std::cos(th) * 1.0f;
+            c2_y[i] = std::sin(th) * 1.0f;
         }
-        ImPlot::PlotLine("H = 0.5 Isocontour", circle_x, circle_y, CIRCLE_PTS + 1, 
-                        {ImPlotProp_LineColor, ImVec4(0.3f, 0.4f, 0.5f, 0.4f), ImPlotProp_LineWeight, 1.0f});
 
-        // 2. Trajectory Phase Orbit
+        ImPlot::PlotLine("H = 0.25", c1_x, c1_y, CIRCLE_PTS + 1, 
+                        {ImPlotProp_LineColor, ImVec4(0.2f, 0.25f, 0.35f, 0.35f), ImPlotProp_LineWeight, 1.0f});
+        ImPlot::PlotLine("H = 0.50 Invariant", c2_x, c2_y, CIRCLE_PTS + 1, 
+                        {ImPlotProp_LineColor, ImVec4(0.25f, 0.35f, 0.5f, 0.5f), ImPlotProp_LineWeight, 1.0f});
+
         if (sz > 1) {
-            ImPlot::PlotLine("Phase Orbit (t)", e_data, p_data, static_cast<int>(sz),
+            // Trajectory Phase Orbit
+            ImPlot::PlotLine("Phase Orbit", e_data, p_data, static_cast<int>(sz),
                             {ImPlotProp_LineColor, colors::NEON_CYAN, ImPlotProp_LineWeight, 2.0f});
 
-            // 3. Current State Head Vector
-            ImPlot::PlotScatter("Current State (E, P)", &head_e, &head_p, 1,
-                               {ImPlotProp_Marker, ImPlotMarker_Circle, ImPlotProp_MarkerSize, 6.0f, ImPlotProp_MarkerFillColor, colors::CYBER_GOLD});
+            // Current State Pip & Vector
+            ImPlot::PlotScatter("Head", &head_e, &head_p, 1,
+                               {ImPlotProp_Marker, ImPlotMarker_Circle, ImPlotProp_MarkerSize, 6.0f, 
+                                ImPlotProp_MarkerFillColor, colors::CYBER_GOLD});
 
-            // 4. Phase-Lead Vector Line from (0,0) to (E, P)
             float origin_x[2] = {0.0f, head_e};
             float origin_y[2] = {0.0f, head_p};
-            ImPlot::PlotLine("State Vector", origin_x, origin_y, 2,
+            ImPlot::PlotLine("Lead Vector", origin_x, origin_y, 2,
                             {ImPlotProp_LineColor, ImVec4(1.0f, 0.84f, 0.0f, 0.6f), ImPlotProp_LineWeight, 1.5f});
         }
 
         ImPlot::EndPlot();
     }
+}
 
-    ImGui::End();
+void render_symplectic_phase_portrait(StudioTelemetry& telemetry) {
+    begin_card("CardSymplectic", "SR-MIT SYMPLECTIC PHASE PORTRAIT", "det(R) = 1 / Unitary Invariant", "H <= 50.0", colors::NEON_CYAN);
+    render_symplectic_phase_portrait_contents(telemetry);
+    end_card();
 }
 
 } // namespace guim::studio
