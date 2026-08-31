@@ -127,6 +127,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build builder stage (no GPU)
-        run: docker build --target builder -t Guimlab:test .
+        run: docker build --target builder -t guimlab:test .
       - name: Verify binaries exist
-        run: docker run --rm Guimlab:test ls -la /guimlab/build/bin/
+        run: docker run --rm guimlab:test ls -la /guimlab/build/bin/
