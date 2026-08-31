@@ -280,7 +280,7 @@ int main(int argc, char** argv) {
 
     std::chrono::microseconds frame_interval(static_cast<long long>(10000.0 / playback_speed)); // 10 ms nominal
 
-    std::printf(ANSI_BOLD "Streaming Audio Frames into Neuromorphic Substrate...\n\n" ANSI_RESET);
+    std::printf(ANSI_BOLD "Streaming %zu Audio Frames into Neuromorphic Substrate...\n\n" ANSI_RESET, total_frames);
 
     auto start_time = std::chrono::steady_clock::now();
     double total_latency_us = 0.0;

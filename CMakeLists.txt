@@ -126,42 +126,58 @@ if(UNIX)
 endif()
 set_target_properties(guim_dashboard PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
+option(GUIM_BUILD_STUDIO "Build Sokol/ImGui graphical cockpit studio" ON)
+
 # ----------------------------------------------------------------------------
 #  GuimLab Studio — AAA High-Density Neuromorphic Cockpit (Sokol / ImGui / ImPlot)
 # ----------------------------------------------------------------------------
-add_executable(guim_studio
-    src/studio/main_studio.cpp
-    src/studio/shm_client.cpp
-    src/studio/viewport_session.cpp
-    src/studio/panels/cortex_thermal_map.cpp
-    src/studio/panels/symplectic_phase_portrait.cpp
-    src/studio/panels/audio_oscilloscope.cpp
-    src/studio/panels/metagradients_inspector.cpp
-    src/studio/panels/telemetry_cockpit.cpp
-    src/studio/third_party/imgui/imgui.cpp
-    src/studio/third_party/imgui/imgui_draw.cpp
-    src/studio/third_party/imgui/imgui_tables.cpp
-    src/studio/third_party/imgui/imgui_widgets.cpp
-    src/studio/third_party/implot/implot.cpp
-    src/studio/third_party/implot/implot_items.cpp
-)
+if(GUIM_BUILD_STUDIO)
+    set(GUIM_STUDIO_READY TRUE)
+    if(UNIX AND NOT APPLE)
+        find_package(OpenGL QUIET)
+        find_package(X11 QUIET)
+        if(NOT (OpenGL_FOUND AND X11_FOUND))
+            set(GUIM_STUDIO_READY FALSE)
+            message(STATUS "[Studio] OpenGL/X11 dev libraries not found — skipping guim_studio (headless mode)")
+        endif()
+    endif()
 
-target_include_directories(guim_studio PRIVATE
-    include
-    include/sokol
-    src/studio
-    src/studio/third_party/imgui
-    src/studio/third_party/implot
-)
+    if(GUIM_STUDIO_READY)
+        add_executable(guim_studio
+            src/studio/main_studio.cpp
+            src/studio/shm_client.cpp
+            src/studio/viewport_session.cpp
+            src/studio/panels/cortex_thermal_map.cpp
+            src/studio/panels/symplectic_phase_portrait.cpp
+            src/studio/panels/audio_oscilloscope.cpp
+            src/studio/panels/metagradients_inspector.cpp
+            src/studio/panels/telemetry_cockpit.cpp
+            src/studio/third_party/imgui/imgui.cpp
+            src/studio/third_party/imgui/imgui_draw.cpp
+            src/studio/third_party/imgui/imgui_tables.cpp
+            src/studio/third_party/imgui/imgui_widgets.cpp
+            src/studio/third_party/implot/implot.cpp
+            src/studio/third_party/implot/implot_items.cpp
+        )
 
-target_compile_options(guim_studio PRIVATE ${GUIM_CXX_FLAGS})
-target_link_libraries(guim_studio PRIVATE guim)
-if(UNIX)
-    target_link_libraries(guim_studio PRIVATE GL X11 Xi Xcursor dl m rt pthread)
-elseif(WIN32)
-    target_link_libraries(guim_studio PRIVATE d3d11 dxgi)
+        target_include_directories(guim_studio PRIVATE
+            include
+            include/sokol
+            src/studio
+            src/studio/third_party/imgui
+            src/studio/third_party/implot
+        )
+
+        target_compile_options(guim_studio PRIVATE ${GUIM_CXX_FLAGS})
+        target_link_libraries(guim_studio PRIVATE guim)
+        if(UNIX)
+            target_link_libraries(guim_studio PRIVATE GL X11 Xi Xcursor dl m rt pthread)
+        elseif(WIN32)
+            target_link_libraries(guim_studio PRIVATE d3d11 dxgi)
+        endif()
+        set_target_properties(guim_studio PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+    endif()
 endif()
-set_target_properties(guim_studio PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # ----------------------------------------------------------------------------
 #  GoogleTest Suite: guim_tests
