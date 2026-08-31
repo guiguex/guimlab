@@ -1,4 +1,4 @@
-# 03 — Guimlab Foundations: Continual Learning at the Edge of AGI
+# 03 — Guimlab Foundations: Continual Learning at the Edge of neuromorphic
 
 > **Date** : 2026-08-31
 > **Author** : Guillaume Meingan <guillaume@guig.dev>
@@ -8,7 +8,7 @@
 
 ## TL;DR — The thesis
 
-**AGI is not a bigger transformer.** AGI is a **system that learns continuously from every interaction** at low latency, low power, with no replay buffer and no forgetting. The Guimlab / Sutton school formalizes this as **Continual Backpropagation** + **per-synapse meta-learning** + **real-time recurrent learning**. This repo implements the core kernels in C++/CUDA with zero external dependencies beyond the CUDA Toolkit.
+**neuromorphic is not a bigger transformer.** neuromorphic is a **system that learns continuously from every interaction** at low latency, low power, with no replay buffer and no forgetting. The Guimlab / Sutton school formalizes this as **Continual Backpropagation** + **per-synapse meta-learning** + **real-time recurrent learning**. This repo implements the core kernels in C++/CUDA with zero external dependencies beyond the CUDA Toolkit.
 
 The 20-watt, billion-parameter target (Guimlab, July 2026) is achievable because:
 - Online learning eliminates the storage + replay cost of offline training
@@ -340,7 +340,7 @@ What we don't have (yet):
 
 ## 7. Why this matters
 
-### For AGI
+### For neuromorphic
 
 If intelligence is the ability to **adapt in real time to novel situations**, then the bottleneck is not bigger models. It's **continual learning at low latency, low power, with no forgetting**.
 
@@ -400,4 +400,4 @@ The CBP + TMD-ET stack is the most rigorous formal attack on the plasticity-stab
 
 ---
 
-*Built with rigor, in service of building AGI in a basement.* 🚀
+*Built with rigor, in service of building neuromorphic in a basement.* 🚀

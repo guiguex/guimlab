@@ -1,6 +1,6 @@
 # GuimLab Codebase Architecture Index
 
-Hierarchical map of all subsystems in the GuimLab AGI runtime.
+Hierarchical map of all subsystems in the GuimLab neuromorphic runtime.
 
 ---
 

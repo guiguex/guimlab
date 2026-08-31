@@ -1,7 +1,7 @@
 // ============================================================================
 //  main_guim_node_v3.cpp — Host orchestrator (v3) with motor babbling + reflex
 //  ---------------------------------------------------------------------------
-//  Orchestrates the complete two-speed AGI substrate on a single shared POSIX SHM:
+//  Orchestrates the complete two-speed neuromorphic substrate on a single shared POSIX SHM:
 //    * Reflex (kiss_reflex_kernel)    — L0 register path, writes reflex_motor_out[16]
 //    * Cortex (guim_lovelace_kernel)  — sparse + WMMA, writes cortex_cognitive_out[256]
 //    * Babbling (motor_babbling_kernel) — exploration noise on stream_plasticity
@@ -111,7 +111,7 @@ int main(int /*argc*/, char** /*argv*/) {
 
     constexpr const char* SHM_NAME = "/guim_ipc_v3_shm";
 
-    std::printf("[guim_node_v3] Two-speed AGI orchestrator (Reflex + Cortex + Babbling)\n");
+    std::printf("[guim_node_v3] Two-speed neuromorphic orchestrator (Reflex + Cortex + Babbling)\n");
 
     // ---------- 1. SHM create + mmap + cudaHostRegister ----------
     std::printf("[guim_node_v3] Creating POSIX SHM '%s'...\n", SHM_NAME);

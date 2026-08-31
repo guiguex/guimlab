@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.22)
 project(guimlab
     VERSION     0.2.0
-    DESCRIPTION "Real-time continual learning Voice-to-Voice AGI substrate"
+    DESCRIPTION "Real-time continual learning Voice-to-Voice neuromorphic substrate"
     LANGUAGES   CXX CUDA
 )
 

@@ -269,7 +269,7 @@ With the full Guimlab substrate now including meta-cognition:
    - Per-synapse meta-learning (TMD-ET)
    - Plasticity preservation (CBP + GC stream)
 
-This is the **complete substrate** for a real-time, continual-learning AGI at 20W.
+This is the **complete substrate** for a real-time, continual-learning neuromorphic at 20W.
 
 ---
 

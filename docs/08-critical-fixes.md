@@ -1,24 +1,24 @@
-ï»¿# 08 â€” Critical Fixes from User Review
+# 08 — Critical Fixes from User Review
 
 > **Date** : 2026-08-31
 > **Reviewer** : Guillaume Meingan (project author)
 > **Context** : Pre-compilation review of the Guimlab Cortex + KISS Reflex + Motor Babbling stack
 
-This document captures **4 critical material corrections** identified by the project author before first compilation. Each fix is grounded in a specific failure mode the reviewer saw in the design â€” and each has a corresponding code change in this commit.
+This document captures **4 critical material corrections** identified by the project author before first compilation. Each fix is grounded in a specific failure mode the reviewer saw in the design — and each has a corresponding code change in this commit.
 
 ---
 
-## Fix #1 â€” L0 Register Spill in the Reflex Kernel
+## Fix #1 — L0 Register Spill in the Reflex Kernel
 
 ### The failure mode
 
-The original reflex kernel used `constexpr int REFLEX_NEURONS = 32; REFLEX_SENSORS = 32;` â€” a 32Ã—32 weight matrix pinned to L0 registers via `__launch_bounds__(32, 1)`.
+The original reflex kernel used `constexpr int REFLEX_NEURONS = 32; REFLEX_SENSORS = 32;` — a 32×32 weight matrix pinned to L0 registers via `__launch_bounds__(32, 1)`.
 
 The problem: `local_weights[32] + local_trace[32] + scratch` was ~70 floats per thread, plus ILP-duplicated temporaries could push total register usage toward the 255 cap. If exceeded, NVCC silently spills to local memory (L1 cache), instantly destroying the sub-100 ns latency target.
 
 ### The fix
 
-Reduced to **16 neurons Ã— 32 sensors** = 512 synapses total. With this smaller footprint, register usage stays comfortably under ~60 regs/thread after instruction-level parallelism.
+Reduced to **16 neurons × 32 sensors** = 512 synapses total. With this smaller footprint, register usage stays comfortably under ~60 regs/thread after instruction-level parallelism.
 
 ```cpp
 // src/kiss_reflex_kernel.cu
@@ -30,8 +30,8 @@ constexpr int REFLEX_SENSORS = 32;
 
 A CI guard now parses the `ptxas -v` output and fails the build if any kernel exceeds the 200-reg threshold (well below the 255 cap, leaving room for future features):
 
-- `scripts/check_l0_spill.sh` â€” Bash script that scans `build/**.cu.ptxas` files
-- `CMakeLists.txt` â€” adds `-Xptxas -v` to `GUIM_CUDA_FLAGS` to enable register-usage dumps
+- `scripts/check_l0_spill.sh` — Bash script that scans `build/**.cu.ptxas` files
+- `CMakeLists.txt` — adds `-Xptxas -v` to `GUIM_CUDA_FLAGS` to enable register-usage dumps
 
 Run locally:
 ```bash
@@ -42,7 +42,7 @@ bash scripts/check_l0_spill.sh
 
 ---
 
-## Fix #2 â€” PCIe Thermal Polling (Saturation of the Spin-Wait)
+## Fix #2 — PCIe Thermal Polling (Saturation of the Spin-Wait)
 
 ### The failure mode
 
@@ -54,21 +54,21 @@ while (d_ipc->seq_in <= local_seq && !d_ipc->terminate) {
 }
 ```
 
-A naive spin generates **millions of PCIe polls per second**, saturating the bus and starving the CPU's AVX2 delta filter of bandwidth. Result CPU would can't write new frames fast enough â†’ the GPU spends >99% of its time polling instead of computing.
+A naive spin generates **millions of PCIe polls per second**, saturating the bus and starving the CPU's AVX2 delta filter of bandwidth. Result CPU would can't write new frames fast enough ? the GPU spends >99% of its time polling instead of computing.
 
 ### The fix
 
 Insert `nanosleep.u32 100` (100 ns PCIe backoff) **in BOTH** spin-waits, as the reviewer explicitly required:
 
 ```cpp
-// Reflex kernel â€” src/kiss_reflex_kernel.cu
+// Reflex kernel — src/kiss_reflex_kernel.cu
 if (row == 0) {
     while (d_ipc->seq_in <= local_seq && !d_ipc->terminate) {
         asm volatile("nanosleep.u32 100;");  // 100 ns backoff
     }
 }
 
-// Cortex kernel â€” src/guim_lovelace_kernel.cu
+// Cortex kernel — src/guim_lovelace_kernel.cu
 if (threadIdx.x == 0 && blockIdx.x == 0) {
     while (d_ipc->seq_in <= s_local_seq && !d_ipc->terminate) {
         asm volatile("nanosleep.u32 100;");
@@ -78,24 +78,24 @@ if (threadIdx.x == 0 && blockIdx.x == 0) {
 
 ### Cost analysis
 
-- Cortex budget: 3-5 Î¼s/frame. 100 ns nanosleep = ~2-3% overhead.
-- Reflex budget: 100-200 ns. 100 ns nanosleep = ~50% overhead, but the reflex only polls when the seq hasn't changed â€” under steady load, the wait loop rarely iterates.
+- Cortex budget: 3-5 µs/frame. 100 ns nanosleep = ~2-3% overhead.
+- Reflex budget: 100-200 ns. 100 ns nanosleep = ~50% overhead, but the reflex only polls when the seq hasn't changed — under steady load, the wait loop rarely iterates.
 
 This is the trade-off the reviewer accepted. The alternative (no sleep, PCIe saturation) would block the CPU's AVX2 filter and effectively kill throughput.
 
 ---
 
-## Fix #3 â€” Race Condition: Reflex vs Cortex Writing to the Same Output Buffer
+## Fix #3 — Race Condition: Reflex vs Cortex Writing to the Same Output Buffer
 
 ### The failure mode
 
 **This was the most critical fix.** Both kernels were writing to `d_ipc->delta_output[256]`:
 
 1. Reflex kernel emits a motor command at ~200 ns (e.g., "drop the hot object")
-2. Cortex kernel finishes 3-5 Î¼s later, overwrites `delta_output[0..255]` with its cognitive delta
-3. The CPU reads `delta_output` â€” but the reflex emergency command is **GONE** before it can be acted upon
+2. Cortex kernel finishes 3-5 µs later, overwrites `delta_output[0..255]` with its cognitive delta
+3. The CPU reads `delta_output` — but the reflex emergency command is **GONE** before it can be acted upon
 
-This is a **silent correctness failure**: the system looks fine in benchmarks but a robot holding a hot object will drop it 3 Î¼s too late.
+This is a **silent correctness failure**: the system looks fine in benchmarks but a robot holding a hot object will drop it 3 µs too late.
 
 ### The fix
 
@@ -113,23 +113,23 @@ constexpr int GUIM_REFLEX_MOTORS = 16;
 ```
 
 The CPU client (TBD in Phase 1.5) reads **both** buffers but applies them in priority order:
-1. `reflex_motor_out[16]` â€” execute immediately (emergency stop, drop, hot-object release)
-2. `cortex_cognitive_out[256]` â€” execute after (voice synthesis, planning)
+1. `reflex_motor_out[16]` — execute immediately (emergency stop, drop, hot-object release)
+2. `cortex_cognitive_out[256]` — execute after (voice synthesis, planning)
 
 Neither kernel can ever overwrite the other's output. The two buffers live in separate cache lines (both `alignas(64)`) so there's no false sharing either.
 
 ### Kernel changes
 
-- `kiss_reflex_kernel.cu` â€” writes to `d_ipc->reflex_motor_out[row]` (was `delta_output`)
-- `guim_lovelace_kernel.cu` â€” writes to `d_ipc->cortex_cognitive_out[row]` (was `delta_output`)
+- `kiss_reflex_kernel.cu` — writes to `d_ipc->reflex_motor_out[row]` (was `delta_output`)
+- `guim_lovelace_kernel.cu` — writes to `d_ipc->cortex_cognitive_out[row]` (was `delta_output`)
 
 ---
 
-## Fix #4 â€” Motor Babbling (Exploration Noise)
+## Fix #4 — Motor Babbling (Exploration Noise)
 
 ### The failure mode
 
-Without exploration, the system can only learn from stimuli the user provides explicitly. It has no initiative â€” if the user doesn't say "try this", the system never tries anything new.
+Without exploration, the system can only learn from stimuli the user provides explicitly. It has no initiative — if the user doesn't say "try this", the system never tries anything new.
 
 This is the classic **exploration vs exploitation trade-off** from reinforcement learning (Sutton & Barto, ch. 2). The system should occasionally perturb its outputs to discover novel sensor deltas that drive learning.
 
@@ -149,7 +149,7 @@ const float noise = curand_normal(&local_rng) * noise_scale;
 d_ipc->cortex_cognitive_out[row] += noise;
 ```
 
-When `serotonin â†’ 1` (high confidence), noise is zero â€” the agent acts precisely. When `serotonin â†’ 0` (high uncertainty), noise is at maximum (`BASE_NOISE = 0.05`).
+When `serotonin ? 1` (high confidence), noise is zero — the agent acts precisely. When `serotonin ? 0` (high uncertainty), noise is at maximum (`BASE_NOISE = 0.05`).
 
 ### Where it runs
 
@@ -158,7 +158,7 @@ The babbling kernel runs on **`stream_plasticity`** (cudaStreamNonBlocking), whi
 2. Babbling kernel reads + perturbs + writes back
 3. CPU reads the perturbed value
 
-The CPU sees a small noisy output, which is exactly what we want â€” controlled exploration that doesn't destroy precise actions.
+The CPU sees a small noisy output, which is exactly what we want — controlled exploration that doesn't destroy precise actions.
 
 ### NEVER perturbs `reflex_motor_out[]`
 
@@ -179,19 +179,19 @@ The previous orchestrators (`main_guim_node.cpp`, `main_guim_node_sparse.cpp`) a
 
 | Fix | Severity | Files touched |
 |---|---|---|
-| #1 â€” L0 spill | **High** (would silently destroy latency target) | `src/kiss_reflex_kernel.cu`, `CMakeLists.txt`, `scripts/check_l0_spill.sh` |
-| #2 â€” PCIe saturation | **Medium** (throughput bottleneck) | `src/kiss_reflex_kernel.cu`, `src/guim_lovelace_kernel.cu` |
-| #3 â€” Race condition | **Critical** (silent correctness failure) | `include/ipc_structs_v2.h`, `src/kiss_reflex_kernel.cu`, `src/guim_lovelace_kernel.cu` |
-| #4 â€” Motor babbling | **Medium** (missing exploration) | `src/motor_babbling_kernel.cu` (new), `src/main_guim_node_v3.cpp` (new) |
+| #1 — L0 spill | **High** (would silently destroy latency target) | `src/kiss_reflex_kernel.cu`, `CMakeLists.txt`, `scripts/check_l0_spill.sh` |
+| #2 — PCIe saturation | **Medium** (throughput bottleneck) | `src/kiss_reflex_kernel.cu`, `src/guim_lovelace_kernel.cu` |
+| #3 — Race condition | **Critical** (silent correctness failure) | `include/ipc_structs_v2.h`, `src/kiss_reflex_kernel.cu`, `src/guim_lovelace_kernel.cu` |
+| #4 — Motor babbling | **Medium** (missing exploration) | `src/motor_babbling_kernel.cu` (new), `src/main_guim_node_v3.cpp` (new) |
 
 ---
 
 ## Next steps (post-fix)
 
-1. Run `bash scripts/check_l0_spill.sh` after first build â€” verify all kernels â‰¤200 regs
-2. Run `bash scripts/build.sh` â€” verify clean compile with `-Xptxas -v`
-3. Test the reflex path latency on real GPU â€” confirm <300 ns (incl. nanosleep overhead)
-4. Test the cortex path latency â€” confirm 3-5 Î¼s
+1. Run `bash scripts/check_l0_spill.sh` after first build — verify all kernels =200 regs
+2. Run `bash scripts/build.sh` — verify clean compile with `-Xptxas -v`
+3. Test the reflex path latency on real GPU — confirm <300 ns (incl. nanosleep overhead)
+4. Test the cortex path latency — confirm 3-5 µs
 5. Implement CPU client that reads `reflex_motor_out` **before** `cortex_cognitive_out`
 6. Tune `BASE_NOISE` for motor babbling (current: 0.05)
 
@@ -201,4 +201,4 @@ The previous orchestrators (`main_guim_node.cpp`, `main_guim_node_sparse.cpp`) a
 **Implemented by** : Claude (Anthropic, ultracode xhigh session)
 **Date** : 2026-08-31
 
-ðŸŒ³ **Built with rigor, in service of building AGI in a basement.**
+?? **Built with rigor, in service of building neuromorphic in a basement.**

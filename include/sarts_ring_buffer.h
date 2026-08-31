@@ -2,7 +2,7 @@
 //  sarts_ring_buffer.h — Sokol Asynchronous Ring-Buffer Telemetry Surface (SARTS)
 //  ============================================================================
 //  Lock-free, zero-allocation, cache-line aligned (64 bytes) SPSC/MPMC telemetry
-//  ring buffer bridging bare-metal CUDA AGI kernels with the Sokol UI surface.
+//  ring buffer bridging bare-metal CUDA neuromorphic kernels with the Sokol UI surface.
 //
 //  Author  : GuimLab Core Team
 //  License : AGPL-3.0 / MIT

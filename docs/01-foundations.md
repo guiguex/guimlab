@@ -2,7 +2,7 @@
 
 > **Document** : `01-foundations.md`
 > **Scope** : Bases théoriques du kernel CUDA d'apprentissage continu temps-réel (60 Hz, sans BPTT, sans replay buffer)
-> **Audience** : Ingénieurs C++/CUDA implémentant un agent AGI interactif
+> **Audience** : Ingénieurs C++/CUDA implémentant un agent neuromorphic interactif
 
 ---
 
@@ -13,7 +13,7 @@
 3. [Eligibility Traces (λ)](#3-eligibility-traces-λ)
 4. [TD(λ) — Temporal Difference Learning](#4-tdλ--temporal-difference-learning)
 5. [Plasticity Loss — pourquoi ça arrive](#5-plasticity-loss--pourquoi-ça-arrive)
-6. [Pourquoi ce stack est unique pour AGI](#6-pourquoi-ce-stack-est-unique-pour-agi)
+6. [Pourquoi ce stack est unique pour neuromorphic](#6-pourquoi-ce-stack-est-unique-pour-neuromorphic)
 7. [Pseudo-code complet CBP + RTRL + TD(λ)](#7-pseudo-code-complet-cbp--rtrl--tdλ)
 8. [References](#8-references)
 
@@ -356,7 +356,7 @@ Combinaisons modernes (e.g., ReZero, DeepNet) qui maintiennent l'identité au d�
 
 ---
 
-## 6. Pourquoi ce stack est unique pour AGI
+## 6. Pourquoi ce stack est unique pour neuromorphic
 
 ### 6.1 Comparaison avec les Transformers
 

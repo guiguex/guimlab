@@ -1,6 +1,6 @@
 # CUDA Engineering — Fused Kernels, Arenas, and Continual-Learning Performance
 
-> **Audience** : kernel authors building a low-latency AGI continual-learning runtime where inference, eligibility trace, weight update, and plasticity reset must complete in a single deterministic pass per frame.
+> **Audience** : kernel authors building a low-latency neuromorphic continual-learning runtime where inference, eligibility trace, weight update, and plasticity reset must complete in a single deterministic pass per frame.
 > **Target hardware** : NVIDIA Ampere (A100 / RTX 30) minimum, Ada Lovelace and Hopper (H100 / H200) preferred. Blackwell B200 / RTX 50 noted where Blackwell-specific guidance diverges.
 > **Latency budget** : < 50 μs per frame for the inner loop (single recurrent layer + plasticity step).
 > **Toolchain** : CUDA Toolkit 12.x / 13.x, `nvcc`, CMake ≥ 3.26, Nsight Compute, Nsight Systems.

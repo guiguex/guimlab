@@ -1,4 +1,4 @@
-﻿# 07 — Guimlab Cortex Architecture: PTX + WMMA + Sub-Warp Reflex
+# 07 � Guimlab Cortex Architecture: PTX + WMMA + Sub-Warp Reflex
 
 > **The synthesis**: every meta-cognitive mechanism we've built (CBP, TMD-ET, CF-CTT, DDWR, PTX surprise, WMMA broadcast, L2 pinning) fused into two production-grade persistent kernels.
 
@@ -8,9 +8,9 @@
 
 Two parallel persistent kernels sharing one SHM segment:
 
-1. **Cortex (`guim_lovelace_fused_kernel`)** — full meta-cognitive substrate, ~3-5 μs/frame, runs the bulk of learning. Uses PTX `vabsdiff4` for surprise, `__ballot_sync` for warp routing, WMMA `mma_sync` for one-shot neuromodulation, CF-CTT for tick-rate-independent traces, DDWR for 95% VRAM saved.
+1. **Cortex (`guim_lovelace_fused_kernel`)** � full meta-cognitive substrate, ~3-5 �s/frame, runs the bulk of learning. Uses PTX `vabsdiff4` for surprise, `__ballot_sync` for warp routing, WMMA `mma_sync` for one-shot neuromodulation, CF-CTT for tick-rate-independent traces, DDWR for 95% VRAM saved.
 
-2. **Reflex (`kiss_reflex_persistent_kernel`)** — single warp, **32 neurons × 32 sensors** entirely in L0 register file (~4 KiB). Sub-100 ns latency. The "spinal cord" — handles emergencies (impact detection, threat avoidance, emergency stop) BEFORE the cortex has finished thinking.
+2. **Reflex (`kiss_reflex_persistent_kernel`)** � single warp, **32 neurons � 32 sensors** entirely in L0 register file (~4 KiB). Sub-100 ns latency. The "spinal cord" � handles emergencies (impact detection, threat avoidance, emergency stop) BEFORE the cortex has finished thinking.
 
 This is the **biological architecture** (spinal reflex + cerebral cortex) implemented in CUDA on RTX 4090.
 
@@ -27,24 +27,24 @@ PHASE 3  __ballot_sync(surprise > threshold)           (1 cycle, all 32 lanes)
 PHASE 4  Load alpha tile (16x16) into WMMA fragment    (1 cycle)
 PHASE 5  WMMA mma_sync(alpha_frag, neuro_frag, ...)    (1 cycle, Tensor Core!)
 PHASE 6  Store alpha tile back                         (1 cycle)
-PHASE 7  Forward (tanh) — active neurons only         (skipped for dormant)
-PHASE 8  TMD-ET + CF-CTT — active neurons only         (skipped for dormant)
+PHASE 7  Forward (tanh) � active neurons only         (skipped for dormant)
+PHASE 8  TMD-ET + CF-CTT � active neurons only         (skipped for dormant)
 PHASE 9  Write delta_output[row] = h_new - h_old
 PHASE 10 __threadfence_system + seq_out++
 ```
 
 **For dormant warps (98%+ of frames)**: only phases 1, 3 (skip), 9, 10 execute. **No VRAM access for weights/traces/alphas.** The warp context-switches to another warp on the SM.
 
-**For surprised warps (2% of frames)**: full pipeline. The WMMA phase 5 is the dopamine broadcast — a single hardware tick re-weights 256 synapses.
+**For surprised warps (2% of frames)**: full pipeline. The WMMA phase 5 is the dopamine broadcast � a single hardware tick re-weights 256 synapses.
 
 ### IPC layout (INT8 packed, cache-aligned)
 
 ```
 GuimSharedMemoryV2 (alignas 64):
-  seq_in, timestamp_ns, dopamine, serotonin     ← CPU → GPU release signal
-  real_sensors_q8[32], pred_sensors_q8[32]    ← 128 INT8 packed sensors
+  seq_in, timestamp_ns, dopamine, serotonin     ? CPU ? GPU release signal
+  real_sensors_q8[32], pred_sensors_q8[32]    ? 128 INT8 packed sensors
                                                   (128 bytes total vs 512 bytes for fp32)
-  seq_out, delta_output[256]                    ← GPU → CPU release signal
+  seq_out, delta_output[256]                    ? GPU ? CPU release signal
   terminate
 ```
 
@@ -53,26 +53,26 @@ INT8 quantization divides PCIe sensor bandwidth by 4. Still 256 bits of resoluti
 ### Surprise gating
 
 ```
-PTX vabsdiff4(u32 real, u32 pred) → SAD ∈ [0, 1020]
-  if SAD > 10 → neuron is "surprised", warp stays active
-  if SAD ≤ 10 → neuron is "expecting this", warp goes dormant
+PTX vabsdiff4(u32 real, u32 pred) ? SAD ? [0, 1020]
+  if SAD > 10 ? neuron is "surprised", warp stays active
+  if SAD = 10 ? neuron is "expecting this", warp goes dormant
 ```
 
-The threshold (10 out of 1020) is empirically tuned. Below this, sensory input matches prediction → no learning needed → **plasticity is suspended**.
+The threshold (10 out of 1020) is empirically tuned. Below this, sensory input matches prediction ? no learning needed ? **plasticity is suspended**.
 
 ### Neuromodulation cocktail
 
 ```cpp
 const float neuromod = d_ipc->dopamine * d_ipc->serotonin;
 // example: dopamine = 1.0 (big surprise = reward), serotonin = 0.8 (high confidence)
-// neuromod = 0.8 → alpha *= 1.8 globally, one-shot plasticity boost
+// neuromod = 0.8 ? alpha *= 1.8 globally, one-shot plasticity boost
 ```
 
 Dopamine: reward prediction error (scaled surprise).
 Serotonin: stability/confidence (1 - surprise).
-Combined: `dopamine × serotonin` → broadcast scalar.
+Combined: `dopamine � serotonin` ? broadcast scalar.
 
-This scalar fills a 16×16 fragment, then `mma_sync` does the broadcast in **one hardware tick**.
+This scalar fills a 16�16 fragment, then `mma_sync` does the broadcast in **one hardware tick**.
 
 ---
 
@@ -80,20 +80,20 @@ This scalar fills a 16×16 fragment, then `mma_sync` does the broadcast in **one
 
 ### Why it exists
 
-Even at 3-5 μs per frame, the cortex can't react fast enough for emergencies:
+Even at 3-5 �s per frame, the cortex can't react fast enough for emergencies:
 - Collision avoidance: 1 ms budget for human-equivalent reflex
 - Drop detection: 0.1 ms budget
 - Audio feedback (avoiding feedback loops): 0.01 ms budget
 
-The cortex's 3-5 μs is too slow. We need a **separate, faster path**.
+The cortex's 3-5 �s is too slow. We need a **separate, faster path**.
 
 ### The hack: declare weights as local arrays
 
 ```cpp
 __global__ void __launch_bounds__(32, 1)
 kiss_reflex_persistent_kernel(...) {
-    float local_weights[REFLEX_SENSORS];      // ← 32 floats, ALL in registers
-    float local_trace[REFLEX_SENSORS];        // ← ditto
+    float local_weights[REFLEX_SENSORS];      // ? 32 floats, ALL in registers
+    float local_trace[REFLEX_SENSORS];        // ? ditto
     // ...
 }
 ```
@@ -102,7 +102,7 @@ With `__launch_bounds__(32, 1)`, nvcc knows:
 - 32 threads per block
 - 1 block per SM (so we have ALL the registers)
 
-Each thread can use up to **255 32-bit registers**. 32 floats of weights + 32 floats of trace + a few scratch = ~70 registers per thread. **Easily fits in the register file** — NO VRAM access during inference.
+Each thread can use up to **255 32-bit registers**. 32 floats of weights + 32 floats of trace + a few scratch = ~70 registers per thread. **Easily fits in the register file** � NO VRAM access during inference.
 
 ### Latency breakdown
 
@@ -117,28 +117,28 @@ Each thread can use up to **255 32-bit registers**. 32 floats of weights + 32 fl
 
 Plus IPC spin-wait overhead: **~100-200 ns round-trip** for the reflex to act.
 
-**vs Cortex**: 3-5 μs (~50x slower). Reflex is the priority path.
+**vs Cortex**: 3-5 �s (~50x slower). Reflex is the priority path.
 
 ### Two-speed architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Same SHM (zero-copy, both kernels see the same memory)       │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-       ┌─────────────────┴─────────────────┐
-       ▼                                   ▼
-┌─────────────────┐              ┌─────────────────────┐
-│  Cortex          │              │  Reflex             │
-│  (32 KB weights) │              │  (4 KiB registers)   │
-│  3-5 μs/frame    │              │  100-200 ns          │
-│  Full meta-cog   │              │  Emergency only      │
-│  Surprise gate   │              │  Always running      │
-│  TMD-ET learning │              │  Simple TD           │
-└─────────────────┘              └─────────────────────┘
-       │                                   │
-       └─────────────┬─────────────────────┘
-                     ▼
++-------------------------------------------------------------+
+�  Same SHM (zero-copy, both kernels see the same memory)       �
++-------------------------------------------------------------+
+                         �
+       +-----------------------------------+
+       ?                                   ?
++-----------------+              +---------------------+
+�  Cortex          �              �  Reflex             �
+�  (32 KB weights) �              �  (4 KiB registers)   �
+�  3-5 �s/frame    �              �  100-200 ns          �
+�  Full meta-cog   �              �  Emergency only      �
+�  Surprise gate   �              �  Always running      �
+�  TMD-ET learning �              �  Simple TD           �
++-----------------+              +---------------------+
+       �                                   �
+       +-----------------------------------+
+                     ?
               Motor output
               (reflex first, cortex refines)
 ```
@@ -178,12 +178,12 @@ Requires sm_89 (RTX 4090) or higher for full WMMA + PTX support. Falls back grac
 
 ---
 
-## Performance comparison: dense → sparse → reflex
+## Performance comparison: dense ? sparse ? reflex
 
 | Layer | Latency | VRAM/frame | Power | When used |
 |---|---|---|---|---|
-| Dense cortex | ~100 μs | 98K reads | 80W | Never (superseded) |
-| Sparse cortex (DDWR) | 3-5 μs | ~3K reads (active only) | 5-10W | Default cognitive path |
+| Dense cortex | ~100 �s | 98K reads | 80W | Never (superseded) |
+| Sparse cortex (DDWR) | 3-5 �s | ~3K reads (active only) | 5-10W | Default cognitive path |
 | **Reflex (L0)** | **100-200 ns** | **0 weight reads** | **<1W** | **Emergencies, motor primitives** |
 
 The reflex path is **~50x faster** than the sparse cortex, and **~1000x faster** than the dense baseline.
@@ -193,44 +193,44 @@ The reflex path is **~50x faster** than the sparse cortex, and **~1000x faster**
 ## The complete Guimlab architecture (final)
 
 ```
-Sensors → AVX2 delta filter (CPU, branchless)
-     ↓ zero-copy SHM (INT8 packed, cache-aligned)
-     ├──→ Reflex (kiss_reflex_persistent_kernel)
-     │     └─ L0 register path, 100 ns, emergency motor commands
-     │
-     └──→ Cortex (guim_lovelace_fused_kernel)
-           ├─ PTX vabsdiff4 surprise metric
-           ├─ __ballot_sync DDWR warp routing
-           ├─ WMMA mma_sync neuromodulation broadcast (Tensor Core)
-           ├─ CF-CTT closed-form continuous-time traces
-           ├─ TMD-ET per-synapse meta-learning
-           ├─ CBP + GC plasticity preservation
-           └─ __threadfence_system publish
-                 ↓
-           CPU reads delta_output → voice synth / motor / decision
+Sensors ? AVX2 delta filter (CPU, branchless)
+     ? zero-copy SHM (INT8 packed, cache-aligned)
+     +--? Reflex (kiss_reflex_persistent_kernel)
+     �     +- L0 register path, 100 ns, emergency motor commands
+     �
+     +--? Cortex (guim_lovelace_fused_kernel)
+           +- PTX vabsdiff4 surprise metric
+           +- __ballot_sync DDWR warp routing
+           +- WMMA mma_sync neuromodulation broadcast (Tensor Core)
+           +- CF-CTT closed-form continuous-time traces
+           +- TMD-ET per-synapse meta-learning
+           +- CBP + GC plasticity preservation
+           +- __threadfence_system publish
+                 ?
+           CPU reads delta_output ? voice synth / motor / decision
 
 [Maintenance stream (cudaStreamNonBlocking, every 10s):]
-  plasticity_sweeper_kernel → soft noise injection on dormant synapses
+  plasticity_sweeper_kernel ? soft noise injection on dormant synapses
 ```
 
-Every layer we've built this session composes into this stack. It's **the complete substrate** for a real-time, sub-microsecond, meta-cognitive, continual-learning AGI.
+Every layer we've built this session composes into this stack. It's **the complete substrate** for a real-time, sub-microsecond, meta-cognitive, continual-learning neuromorphic.
 
 ---
 
 ## What comes next
 
-1. **Predictive head** — close the surprise loop (the network generates its own `pred_sensors_q8[]` from its hidden state)
-2. **Hierarchical options layer** — multi-step planner that uses the neuromodulation broadcast for chunk-level plasticity
-3. **Voice integration** — ULTRABLABLA audio frames become the sensor stream
-4. **Real-world deployment** — RTX 4090 + voice agent, validate against real users
+1. **Predictive head** � close the surprise loop (the network generates its own `pred_sensors_q8[]` from its hidden state)
+2. **Hierarchical options layer** � multi-step planner that uses the neuromodulation broadcast for chunk-level plasticity
+3. **Voice integration** � ULTRABLABLA audio frames become the sensor stream
+4. **Real-world deployment** � RTX 4090 + voice agent, validate against real users
 
 ---
 
 ## References
 
-1. NVIDIA, *"CUDA C++ Programming Guide — `vabsdiff4` PTX intrinsic"*
-2. NVIDIA, *"CUDA C++ Programming Guide — Tensor Core WMMA"*
-3. NVIDIA, *"CUDA C++ Best Practices — `__launch_bounds__` and register allocation"*
+1. NVIDIA, *"CUDA C++ Programming Guide � `vabsdiff4` PTX intrinsic"*
+2. NVIDIA, *"CUDA C++ Programming Guide � Tensor Core WMMA"*
+3. NVIDIA, *"CUDA C++ Best Practices � `__launch_bounds__` and register allocation"*
 4. Friston, K. (2010). *The free-energy principle.* Nature Reviews Neuroscience.
 5. Schultz, W. (1998). *Dopamine reward signals.* J Neurophysiol.
 7. Williams & Zipser (1989). *RTRL.* Neural Computation.
@@ -240,6 +240,6 @@ Every layer we've built this session composes into this stack. It's **the comple
 
 **Last reviewed**: 2026-08-31 (ultracode session)
 
-This document + the previous six + the five commits together constitute the **complete Guimlab substrate** for a continual-learning, sub-microsecond AGI at 20W.
+This document + the previous six + the five commits together constitute the **complete Guimlab substrate** for a continual-learning, sub-microsecond neuromorphic at 20W.
 
-🚀 **Done.** 🌙
+?? **Done.** ??

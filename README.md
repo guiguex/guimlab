@@ -148,7 +148,7 @@ ctest --test-dir build --output-on-failure
 | `guim_tests` | `build/bin/guim_tests` | 53 test suites covering numerical accuracy, memory stability, physics invariants & SARTS. |
 | `guim_studio`| `build/bin/guim_studio`| AAA Sokol + ImGui + ImPlot real-time telemetry cockpit (SARTS). |
 | `guim_monitor`| `build/bin/guim_monitor`| High-frequency ANSI visualizer dashboard. |
-| `guim_node_v3`| `build/bin/guim_node_v3`| Two-speed asynchronous AGI server node. |
+| `guim_node_v3`| `build/bin/guim_node_v3`| Two-speed asynchronous neuromorphic server node. |
 | `guim_client` | `build/bin/guim_client` | Sub-microsecond POSIX shared memory benchmark client. |
 
 ---

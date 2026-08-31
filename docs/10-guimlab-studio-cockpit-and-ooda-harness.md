@@ -1,4 +1,4 @@
-# GuimLab Studio & AGI Development Harness (Cockpit Architecture)
+# GuimLab Studio & neuromorphic Development Harness (Cockpit Architecture)
 
 **Author:** GuimLab Research & Engineering  
 **Version:** 0.3.0-NextGen  
@@ -8,7 +8,7 @@
 
 ## 1. Overview & Architectural Isolation Doctrine
 
-`guim_studio` is a 1000-FPS pure C++20 / Dear ImGui / ImPlot visual cockpit and telemetry fabric designed for the GuimLab continuous-time neuromorphic AGI engine.
+`guim_studio` is a 1000-FPS pure C++20 / Dear ImGui / ImPlot visual cockpit and telemetry fabric designed for the GuimLab continuous-time neuromorphic neuromorphic engine.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
