@@ -8,7 +8,7 @@
 [![CUDA](https://img.shields.io/badge/CUDA-12.0%2B-green.svg?style=flat-square&logo=nvidia)](https://developer.nvidia.com/cuda-toolkit)
 [![Architecture](https://img.shields.io/badge/Compute-sm__86%20%7C%20RTX%203090-orange.svg?style=flat-square)]()
 [![Zero-Alloc](https://img.shields.io/badge/VRAM%20Allocations-0%20in%20Hot%20Loop-success.svg?style=flat-square)]()
-[![Tests](https://img.shields.io/badge/Tests-26%2F26%20Passed-brightgreen.svg?style=flat-square)]()
+[![Tests](https://img.shields.io/badge/Tests-43%2F43%20Passed-brightgreen.svg?style=flat-square)]()
 [![Latency](https://img.shields.io/badge/Median%20Latency-308.5%20%CE%BCs-purple.svg?style=flat-square)]()
 
 <br/>
