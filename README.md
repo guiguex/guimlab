@@ -168,8 +168,15 @@ If you use GuimLab in your research or systems engineering projects, please cite
 
 ---
 
-## 📄 License
-Released under the **AGPL-3.0 / MIT Dual License**.
+## 📄 Commercial Licensing & Academic Evaluation
+
+GuimLab is a proprietary neuromorphic computing technology created by **Guillaume Meingan**.
+
+- **Academic & Research Peer-Review**: Free for non-commercial scientific evaluation, benchmark reproducibility, and peer review (see [LICENSE](LICENSE)).
+- **Commercial & Production Deployment**: **Strictly prohibited** without a signed commercial licensing agreement.
+
+💼 **Enterprise Licensing, Hardware Integration & Acquisition Inquiries:**  
+Contact: **Guillaume Meingan** — [`guillaume@guig.dev`](mailto:guillaume@guig.dev)
 
 ## Empirical Measurement vs. Earlier Claims
 
