@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 //  guim_kernel.h - Public C ABI for the Guimlab continual learning kernel.
 //
 //  Author        : Guimlab contributors
@@ -11,11 +11,6 @@
 //
 //  This ABI must stay C-compatible (extern "C", no exceptions, no STL types)
 //  so the kernel can be consumed from C, Rust, Julia, or any FFI layer.
-//
-//  STAGING NOTE (2026-08-31): the .cu and CPU ref are placeholders that
-//  return NaN as a sentinel.  The harness below intentionally tolerates NaN
-//  and reports "kernel not yet implemented" rather than failing — once the
-//  real fused kernel lands, every test will exercise it unchanged.
 // =============================================================================
 #ifndef GUIM_KERNEL_H
 #define GUIM_KERNEL_H
