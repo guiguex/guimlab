@@ -293,8 +293,175 @@ Each Zig module exposes `pub fn step(self: *Module, dt: f32) void` via C-ABI. Mo
 
 **Target architecture benefit**: cross-compile to single-binary static distribution (edge/embedded) without glibc dependency; deterministic memory leak detection beyond ASan; one-step C-ABI interop with the existing C++20 codebase.
 
+### Phase 5: Neural Audio Codec Ingestion Pipeline (Real-World Voice Interface)
+
+> **Status**: 🔴 **CRITICAL PATH** — Required to validate GuimLab on real speech beyond synthetic benchmarks.
+> **Timeline**: Months 1–3 post-publication.
+
+#### 5.0 — Problem Statement
+
+GuimLab's current benchmarks validate algorithmic correctness on **synthetic signals** (Mackey-Glass chaos, 3-harmonic formants, pitch shift under noise). For scientific credibility and real-world deployment, the substrate must ingest **real continuous acoustic latent streams** from state-of-the-art neural audio codecs — operating at 12.5–50 Hz on continuous embedding vectors rather than discrete text tokens.
+
+#### 5.1 — Target Audio Codec Stack (Priority Order)
+
+| Codec | Frame Rate | Bitrate | Latent Dim | C++ Path | Priority |
+|:---|:---|:---|:---|:---|:---|
+| **Mimi** (Kyutai/Moshi) | **12.5 Hz** | 1.1 kbps | 256-d continuous | Custom CUDA encoder | 🔴 P0 |
+| **EnCodec** (Meta) | **50 Hz** | 1.5–24 kbps | 128-d RVQ codes → continuous | `encodec.cpp` (ggml) | 🟡 P1 |
+| **DAC** (Descript) | **50 Hz** | 8–16 kbps | 1024-d continuous | Custom port or ONNX→C++ | 🟡 P1 |
+| **SNAC** (Multi-scale) | **12.5/25/50 Hz** | Variable | Multi-resolution | Research port | 🟢 P2 |
+| **SpeechTokenizer** | **50 Hz** | Semantic + Acoustic | Dual-stream | Research port | 🟢 P2 |
+
+**Rationale**: Mimi at 12.5 Hz is the ideal match for GuimLab's 2 kHz continuous substrate — only 1 codec frame per 160 GuimLab ticks, allowing deep temporal interpolation between embeddings. EnCodec/DAC at 50 Hz are the established baselines for reproducibility.
+
+#### 5.2 — Architecture: Codec → GuimLab Continuous Bridge
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     AUDIO INGESTION PIPELINE                        │
+│                                                                     │
+│  ┌──────────┐    ┌───────────────┐    ┌──────────────────────────┐  │
+│  │ PCM 16kHz │───▶│ cuFFT Mel     │───▶│ encodec.cpp / mimi.cpp  │  │
+│  │ Microphone│    │ Spectrogram   │    │ (ggml C-ABI, GPU)       │  │
+│  │ or WAV    │    │ (CUDA kernel) │    │ Encoder-only inference  │  │
+│  └──────────┘    └───────────────┘    └──────────┬───────────────┘  │
+│                                                   │                  │
+│                                    Continuous Latent Embeddings      │
+│                                    z(t) ∈ ℝ^{128-256} @ 12.5-50 Hz │
+│                                                   │                  │
+│  ┌────────────────────────────────────────────────▼──────────────┐  │
+│  │              LATENT INTERPOLATION BRIDGE                       │  │
+│  │  Hermite cubic spline interpolation from codec frame rate     │  │
+│  │  (12.5–50 Hz) to GuimLab substrate rate (2 kHz)              │  │
+│  │  z_interp(t) = H₃(z[k], z[k+1], ż[k], ż[k+1], α)          │  │
+│  └────────────────────────────────────────────────┬──────────────┘  │
+│                                                   │                  │
+│  ┌────────────────────────────────────────────────▼──────────────┐  │
+│  │           GUIMLAB IPC SHARED MEMORY (Zero-Copy)               │  │
+│  │  GuimSharedMemoryV2.real_sensors_q8[GUIM_PACKED_DIM]         │  │
+│  │  Quantized INT8 packed embeddings @ 2 kHz continuous          │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+              GuimLab CUDA Persistent Kernels
+              (L0 Reflex + L1/L2 Cortex + SR-MIT)
+```
+
+#### 5.3 — Sub-Phase 5.0: `encodec.cpp` Integration via C-ABI (Weeks 1–4)
+
+**Deliverable**: Statically link [PABannier/encodec.cpp](https://github.com/PABannier/encodec.cpp) (ggml-based, zero-dependency C/C++) as an encoder-only module.
+
+```cpp
+// modules/audio_codec/encodec_bridge.h
+#pragma once
+#include <cstdint>
+#include <cstddef>
+
+struct GuimCodecContext;
+
+// Initialize encoder-only codec (no decoder needed for ingestion)
+GuimCodecContext* guim_codec_init(const char* model_path, int sample_rate);
+
+// Encode PCM → continuous latent embeddings
+// Returns number of frames produced (each frame = latent_dim floats)
+int guim_codec_encode(
+    GuimCodecContext* ctx,
+    const float* pcm_samples,      // [n_samples] mono PCM
+    int n_samples,
+    float* latent_out,             // [max_frames * latent_dim] output buffer
+    int max_frames
+);
+
+// Cleanup
+void guim_codec_shutdown(GuimCodecContext* ctx);
+```
+
+**Build integration** in CMakeLists.txt:
+```cmake
+# Phase 5: Neural Audio Codec Module (optional)
+option(GUIM_ENABLE_CODEC "Enable neural audio codec ingestion" OFF)
+if(GUIM_ENABLE_CODEC)
+    add_subdirectory(modules/audio_codec)
+    target_link_libraries(guim_node_v3 PRIVATE guim_codec)
+endif()
+```
+
+**Constitutional compliance**: The codec runs in a **separate thread** feeding the SHM ring buffer. Zero codec code touches the CUDA hot-path. The persistent kernels read from `real_sensors_q8[]` as before — they don't know or care whether the source is synthetic or real audio.
+
+#### 5.4 — Sub-Phase 5.1: CUDA cuFFT Mel Spectrogram Frontend (Weeks 2–4)
+
+**Deliverable**: Zero-allocation GPU mel spectrogram extraction replacing CPU-bound `librosa`.
+
+```cuda
+// modules/audio_codec/mel_frontend.cu
+__global__ void mel_spectrogram_kernel(
+    const float* __restrict__ pcm,           // [window_size] PCM samples
+    const float* __restrict__ mel_filterbank, // [n_mels × n_fft/2+1]
+    float* __restrict__ mel_out,              // [n_mels] output
+    int n_fft, int n_mels
+) {
+    // 1. Windowed FFT via cuFFT (pre-planned, zero alloc)
+    // 2. Power spectrum |X(k)|²
+    // 3. Mel filterbank dot product (warp reduction)
+    // 4. Log-mel compression: 10 * log10(max(mel, 1e-10))
+}
+```
+
+**Memory contract**: FFT plan created once at init (`cufftPlan1d`). Filterbank matrix pre-loaded in device constant memory. Zero dynamic allocations per frame.
+
+#### 5.5 — Sub-Phase 5.2: Mimi 12.5 Hz Native CUDA Port (Months 2–3)
+
+**Deliverable**: Native CUDA reimplementation of Kyutai's Mimi encoder (the codec behind Moshi), targeting 12.5 Hz output at < 1 ms per frame.
+
+**Why Mimi over EnCodec**:
+- 12.5 Hz frame rate = **4× fewer tokens** than 50 Hz codecs → ideal for autoregressive modeling
+- Semantic distillation (WavLM-guided first codebook) → richer embeddings for SR-MIT traces
+- Fully causal architecture → zero look-ahead, compatible with real-time streaming
+
+**Architecture mapping**:
+| Mimi Component | GuimLab Implementation |
+|:---|:---|
+| SEANet Encoder (1D Conv) | CUDA 1D depthwise-separable convolution kernels |
+| RVQ Quantizer | Skip (use pre-quantization continuous embeddings) |
+| Transformer layers | Warp-level `mma.sync` attention (CUTLASS-style) |
+| Semantic distillation head | Pre-trained weights frozen, inference-only |
+
+#### 5.6 — Sub-Phase 5.3: Full-Duplex Voice Pipeline (Months 3–6)
+
+**Deliverable**: Complete bidirectional voice-to-voice loop.
+
+```
+Microphone → cuFFT Mel → Mimi Encoder → z(t) continuous latents
+                                              │
+                                              ▼
+                                   GuimLab Cortex (SR-MIT + CBP)
+                                              │
+                                              ▼
+                              Motor Output → Mimi Decoder → Speaker
+```
+
+**Key metrics to validate**:
+| Metric | Target | Justification |
+|:---|:---|:---|
+| End-to-end voice latency | < 50 ms | Below human perception threshold (~100 ms) |
+| Codec encode latency | < 1 ms | 12.5 Hz frame = 80 ms budget, vast margin |
+| Continuous learning on real speech | No catastrophic forgetting over 10 min | CBP + TMD-ET validated on real formants |
+| Speaker adaptation | < 30 s | Synaptic meta-gradient convergence on new voice |
+
+#### 5.7 — Validation Benchmarks for Real Audio
+
+| Experiment | Dataset | Metric | Success Criterion |
+|:---|:---|:---|:---|
+| **A. Formant Tracking** | TIMIT / LibriSpeech | Phase-lead MSE vs RTRL | SR-MIT advantage ≥ synthetic results |
+| **B. Speaker Adaptation** | VoxCeleb2 | EER after 30s exposure | Continual learning without replay |
+| **C. Turn-Taking Latency** | Fisher Corpus | Interrupt response time | < 100 ms (L0 reflex path) |
+| **D. Continuous Stability** | 1h continuous stream | VRAM leak + NaN count | 0 bytes / 0 NaN |
+
 ---
 
 ## 5. Scientific Conclusion
 
 By critically integrating the mathematical elegance of **GeNN's continuous differential pipelines**, the raw hardware efficiency of **CUTLASS warp-level Tensor Core primitives**, and the deterministic reliability of **ggml's static memory arenas**, GuimLab establishes an unprecedented software architecture: a sub-millisecond, continuous-time neuromorphic intelligence capable of predictive anticipation, continuous online learning, and autonomous self-adaptation entirely on bare-metal silicon.
+
+The Phase 5 neural audio codec roadmap extends this substrate from synthetic validation to real-world voice intelligence, leveraging existing C++ codec implementations (`encodec.cpp`, Mimi native ports) and CUDA signal processing (`cuFFT`) to create a complete, zero-Python, full-duplex voice-to-voice pipeline operating at sub-50ms end-to-end latency.
