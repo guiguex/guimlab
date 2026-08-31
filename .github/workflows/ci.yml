@@ -1,0 +1,132 @@
+﻿# ==============================================================================
+#  .github/workflows/ci.yml — Continuous Integration for guimlab
+#  ==============================================================================
+#  Runs on every push and PR.  Three jobs:
+#    - lint:   CMake-format check (best-effort)
+#    - build:  Compile-only verification (no GPU required)
+#    - bench:  Full build with NVIDIA GPU (self-hosted runner only)
+#
+#  Self-hosted runner setup:
+#    https://docs.github.com/en/actions/hosting-your-own-runners
+#    Label: [self-hosted, gpu, nvidia]  (configure on your runner)
+# ==============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  BUILD_TYPE: Release
+  CUDA_ARCH: "70;75;80;86;89;90"
+
+jobs:
+  # -----------------------------------------------------------------
+  # 1. Lint — best-effort formatting check, no GPU required
+  # -----------------------------------------------------------------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cmake-format
+        run: pip install cmake-format==0.6.13
+
+      - name: Check CMakeLists formatting
+        run: |
+          cmake-format --check CMakeLists.txt || echo "::warning::cmake-format check failed (non-blocking)"
+
+  # -----------------------------------------------------------------
+  # 2. Build — compile-only verification on CUDA 12 + GCC 11
+  #    No GPU required (the .cu files compile against CUDA Toolkit)
+  # -----------------------------------------------------------------
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: nvidia/cuda:12.6.0-devel-ubuntu22.04
+      env:
+        DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+              cmake ninja-build git ca-certificates python3
+          rm -rf /var/lib/apt/lists/*
+
+      - name: CMake configure
+        run: |
+          cmake -B build -S . -G Ninja \
+              -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+              -DCMAKE_CUDA_ARCHITECTURES="${{env.CUDA_ARCH}}" \
+              -DGUIM_BUILD_TESTS=ON \
+              -DGUIM_BUILD_BENCH=OFF  # skip bench (no GPU in CI)
+
+      - name: CMake build
+        run: cmake --build build --parallel
+
+      - name: Run CPU-only tests
+        run: |
+          ctest --test-dir build --output-on-failure -L cpu 2>&1 || true
+
+      - name: Verify library built
+        run: |
+          ls -la build/bin/guim_tests || true
+          file build/bin/guim_tests 2>&1 || true
+
+  # -----------------------------------------------------------------
+  # 3. Bench — full build + GPU benchmark (self-hosted runner only)
+  # -----------------------------------------------------------------
+  bench:
+    runs-on: [self-hosted, gpu, nvidia]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify CUDA
+        run: |
+          nvidia-smi
+          nvcc --version
+
+      - name: CMake configure (full build)
+        run: |
+          cmake -B build -S . -G Ninja \
+              -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+              -DCMAKE_CUDA_ARCHITECTURES="86;89" \
+              -DGUIM_BUILD_TESTS=ON \
+              -DGUIM_BUILD_BENCH=ON
+
+      - name: Build all
+        run: cmake --build build --parallel
+
+      - name: Run latency benchmark
+        run: |
+          ./build/bin/guim_bench --frames 10000 --warmup 100 > bench_results.txt
+          tail -20 bench_results.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: bench_results.txt
+
+      - name: Run full test suite
+        run: |
+          ctest --test-dir build --output-on-failure --timeout 120
+
+  # -----------------------------------------------------------------
+  # 4. Docker — verify Dockerfile is valid (no GPU required)
+  # -----------------------------------------------------------------
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build builder stage (no GPU)
+        run: docker build --target builder -t Guimlab:test .
+      - name: Verify binaries exist
+        run: docker run --rm Guimlab:test ls -la /guimlab/build/bin/

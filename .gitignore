@@ -1,0 +1,64 @@
+# Build outputs
+build/
+out/
+dist/
+
+# CMake intermediates
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+_deps/
+
+# Compile commands (regenerable)
+compile_commands.json
+
+# Compiled object files
+*.o
+*.obj
+*.os
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.exp
+*.pdb
+*.ilk
+
+# CUDA-specific intermediates
+*.cubin
+*.ptx
+*.fatbin
+*.cuobjdump
+*.nvprof
+
+# Build wrappers
+# (gitignore_dir/ is a placeholder folder for this .gitignore - safe to delete)
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Python caches (for tooling scripts)
+__pycache__/
+*.pyc
+*.pyo
+
+# Bench results
+build/bench_results.json
+
+# Local secrets (if any)
+.env
+.env.local
+/.agents
+/tests
+AGENTS.md
+/docs

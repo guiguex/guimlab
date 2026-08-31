@@ -1,0 +1,76 @@
+# ==============================================================================
+#  docker-compose.yml — Reproducible local Guimlab environment
+#  ==============================================================================
+#  Usage:
+#    docker compose run --rm guim-build    # compile everything
+#    docker compose run --rm guim-bench    # run the reflex/cortex bench
+#    docker compose run --rm guim-test     # run the full test suite
+#    docker compose run --rm guim-shell    # interactive shell for debugging
+#
+#  Requires NVIDIA Container Toolkit:
+#    https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+# ==============================================================================
+
+version: "3.9"
+
+x-guim-base: &guim-base
+  image: guimlab:build
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: builder
+  volumes:
+    - ./build:/guimlab/build
+    - .:/guimlab
+    - /guimlab/build/_deps
+  environment:
+    - NVIDIA_VISIBLE_DEVICES=all
+    - CUDA_VISIBLE_DEVICES=0
+    - GUIMLAB_SEED=0xC0FFEE
+
+services:
+  guim-build:
+    <<: *guim-base
+    command: [ "bash", "-c", "cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel" ]
+    profiles: [ "ci", "build" ]
+
+  guim-bench:
+    <<: *guim-base
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: 1
+              driver: nvidia
+    command: [ "bash", "-c", "cmake --build build -- && ./build/bin/guim_bench" ]
+    profiles: [ "bench" ]
+    ipc: host  # for POSIX SHM
+
+  guim-test:
+    <<: *guim-base
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: 1
+              driver: nvidia
+    command: [ "bash", "-c", "cmake --build build -- && ctest --test-dir build --output-on-failure" ]
+    profiles: [ "test" ]
+    ipc: host
+
+  guim-shell:
+    <<: *guim-base
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: 1
+              driver: nvidia
+    stdin_open: true
+    tty: true
+    command: [ "/bin/bash" ]
+    profiles: [ "shell" ]
+    ipc: host
