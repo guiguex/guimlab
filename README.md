@@ -168,26 +168,6 @@ If you use GuimLab in your research or systems engineering projects, please cite
 
 ---
 
-## 📄 Commercial Licensing & Academic Evaluation
-
-GuimLab is a proprietary neuromorphic computing technology created by **Guillaume Meingan**.
-
-- **Academic & Research Peer-Review**: Free for non-commercial scientific evaluation, benchmark reproducibility, and peer review (see [LICENSE](LICENSE)).
-- **Commercial & Production Deployment**: **Strictly prohibited** without a signed commercial licensing agreement.
-
-💼 **Enterprise Licensing, Hardware Integration & Acquisition Inquiries:**  
-Contact: **Guillaume Meingan** — [`guillaume@guig.dev`](mailto:guillaume@guig.dev)
-
----
-
-### ☕ Support the Builder / 🏛️ Enterprise Backing
-
-- **Students, Researchers & Individuals**: I develop this bare-metal engine under severe personal adversity and financial precarity. If this open work brings you value, buying a $5 coffee ([PayPal](https://paypal.me) / Interac: `guillaume@guig.dev` | [GitHub Sponsors](https://github.com/sponsors/guiguex)) directly keeps me fed and coding.
-- **Billion-Dollar Tech & Funded Startups**: Do not extract independent IP for free. If you want this sub-millisecond substrate in production, pay its fair market value — commercial licenses, enterprise deployment rights & technology acquisition: [`guillaume@guig.dev`](mailto:guillaume@guig.dev).
-
----
-
-
 ## Empirical Measurement vs. Earlier Claims
 
 The figures in this README previously cited median latency **308.5 µs / 3,126 FPS** based on an earlier measurement session.
